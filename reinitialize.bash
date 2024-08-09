@@ -177,6 +177,10 @@ main() {
     check_command aws
     check_command amplify
 
+    # Install project dependencies
+    log "Installing project dependencies..."
+    npm install || { log_error "Failed to install project dependencies"; exit 1; }
+
     # Configure AWS CLI
     configure_aws_cli
 
