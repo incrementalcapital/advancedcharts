@@ -4,8 +4,7 @@
  * This component uses the TradingView external embedding script to display
  * a fully-featured chart with customizable settings.
  */
-
-import React, { useEffect, useRef, useState, memo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 /**
  * @typedef {Object} TradingViewWidgetProps
@@ -19,102 +18,101 @@ interface TradingViewWidgetProps {
   theme?: 'light' | 'dark';
 }
 
+declare global {
+  interface Window {
+    TradingView: any;
+  }
+}
+
 /**
  * TradingViewWidget component
  * @param {TradingViewWidgetProps} props - The props for the TradingViewWidget component
  * @returns {JSX.Element} The rendered TradingView widget
  */
-function TradingViewWidget({ 
-  symbol = 'NASDAQ:NVDA', 
-  interval = 'D', 
-  theme = 'dark' 
-}: TradingViewWidgetProps): JSX.Element {
-  // Create a ref to hold the container div element
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // State to track loading status of the widget
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
+  symbol = 'NASDAQ:NVDA',
+  interval = 'D',
+  theme = 'dark'
+}) => {
+  const container = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Store the current value of the ref to use in cleanup
-    const container = containerRef.current;
-
-    /**
-     * Creates and configures the TradingView widget script
-     * @returns {HTMLScriptElement} The configured script element
-     */
-    const createScript = (): HTMLScriptElement => {
-      const script = document.createElement("script");
-      script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
-      script.type = "text/javascript";
-      script.async = true;
-      script.innerHTML = `
-        {
-          "autosize": true,
-          "symbol": "${symbol}",
-          "interval": "${interval}",
-          "timezone": "Etc/UTC",
-          "theme": "${theme}",
-          "style": "8",
-          "locale": "en",
-          "backgroundColor": "rgba(0, 0, 0, 1)",
-          "gridColor": "rgba(0, 0, 0, 1)",
-          "withdateranges": true,
-          "hide_side_toolbar": false,
-          "allow_symbol_change": true,
-          "watchlist": [
-            "${symbol}"
-          ],
-          "compareSymbols": [
-            {
-              "symbol": "FINRA:NVDA_SHORT_VOLUME",
-              "position": "NewPane"
-            },
-            {
-              "symbol": "CME_MINI:ES1!",
-              "position": "NewPriceScale"
-            }
-          ],
-          "details": true,
-          "hotlist": true,
-          "calendar": true,
-          "studies": [
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/tv.js';
+    script.async = true;
+    script.onload = () => {
+      if (container.current) {
+        try {
+          new window.TradingView.widget({
+            autosize: true,
+            symbol: symbol,
+            interval: interval,
+            timezone: "Etc/UTC",
+            theme: theme,
+            style: "8",
+            locale: "en",
+            backgroundColor: "rgba(0, 0, 0, 1)",
+            gridColor: "rgba(0, 0, 0, 1)",
+            withdateranges: true,
+            hide_side_toolbar: false,
+            allow_symbol_change: true,
+            watchlist: [
+              symbol
+            ],
+            compareSymbols: [
+              {
+                "symbol": "FINRA:NVDA_SHORT_VOLUME",
+                "position": "NewPane"
+              },
+              {
+                "symbol": "CME_MINI:ES1!",
+                "position": "NewPriceScale"
+              }
+            ],
+            details: true,
+            hotlist: true,
+            calendar: true,
+            studies: [
               "STD;Visible%1Average%1Price"
             ],
-          "show_popup_button": true,
-          "popup_width": "1000",
-          "popup_height": "650",
-          "support_host": "https://www.tradingview.com"
-        }`;
-      return script;
+            show_popup_button: true,
+            popup_width: "1000",
+            popup_height: "650",
+            container_id: container.current.id,
+          });
+          setLoading(false);
+        } catch (err) {
+          setError("Failed to initialize TradingView widget");
+          setLoading(false);
+        }
+      }
+    };
+    script.onerror = () => {
+      setError("Failed to load TradingView library");
+      setLoading(false);
     };
 
-    try {
-      // Create and append the script to the container
-      if (container) {
-        const script = createScript();
-        container.appendChild(script);
+    document.head.appendChild(script);
 
-        // Set up event listener for script load completion
-        script.onload = () => setIsLoading(false);
-      }
-    } catch (error) {
-      console.error('Error loading TradingView widget:', error);
-      setIsLoading(false);
-    }
-
-    // Cleanup function to remove the script when component unmounts
     return () => {
-      if (container) {
-        container.innerHTML = '';
+      if (container.current) {
+        container.current.innerHTML = '';
       }
+      document.head.removeChild(script);
     };
-  }, [symbol, interval, theme]); // Dependencies array includes props to re-render on changes
+  }, [symbol, interval, theme]);
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
-    <div className="tradingview-widget-container" ref={containerRef} style={{ height: "100%", width: "100%" }}>
-      {isLoading && <div>Loading TradingView widget...</div>}
-      <div className="tradingview-widget-container__widget" style={{ height: "calc(100% - 32px)", width: "100%" }}></div>
+    <div style={{ height: "100%", width: "100%" }}>
+      {loading && <div>Loading TradingView widget...</div>}
+      <div id="tradingview_widget" ref={container} style={{ height: "calc(100% - 32px)", width: "100%" }} />
       <div className="tradingview-widget-copyright">
         <a href="https://www.tradingview.com/" rel="noopener noreferrer" target="_blank">
           <span className="blue-text">Track all markets on TradingView</span>
@@ -122,7 +120,6 @@ function TradingViewWidget({
       </div>
     </div>
   );
-}
+};
 
-// Memoize the component to prevent unnecessary re-renders
-export default memo(TradingViewWidget);
+export default TradingViewWidget;
