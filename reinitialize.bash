@@ -135,6 +135,36 @@ EOF
     log "Note: You may see a message 'Headless mode is not implemented for @aws-amplify/cli-internal'. This can be ignored if the script continues to run successfully."
 }
 
+# Function to clean up S3 buckets associated with the Amplify project
+cleanup_s3_buckets() {
+    local app_id="$1"
+    local env_name="$2"
+    
+    log "Checking for existing S3 buckets..."
+    
+    # List S3 buckets with names containing the app ID and environment name
+    local buckets=$(aws s3api list-buckets --query "Buckets[?contains(Name, '${app_id}') && contains(Name, '${env_name}')].Name" --output text)
+    
+    if [ -n "$buckets" ]; then
+        log "Found existing S3 buckets: $buckets"
+        read -p "Do you want to delete these buckets? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            for bucket in $buckets; do
+                log "Emptying and deleting bucket: $bucket"
+                aws s3 rm s3://$bucket --recursive
+                aws s3api delete-bucket --bucket $bucket
+                log "Bucket $bucket deleted successfully"
+            done
+        else
+            log_error "Existing S3 buckets must be deleted before reinitializing. Aborting."
+            exit 1
+        fi
+    else
+        log "No existing S3 buckets found."
+    fi
+}
+
 # Function to cleaup Cloud Formation Stacks used by Amplify
 cleanup_cloudformation_stacks() {
     local app_id="$1"
@@ -146,9 +176,10 @@ cleanup_cloudformation_stacks() {
     
     if [ -n "$stacks" ]; then
         log "Found existing stacks: $stacks"
-        read -p "Do you want to delete these stacks? (y/n) " -n 1 -r
+        read -p "Do you want to delete these stacks and associated S3 buckets? (y/n) " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
+            cleanup_s3_buckets "$app_id" "$env_name"
             for stack in $stacks; do
                 log "Deleting stack: $stack"
                 aws cloudformation delete-stack --stack-name "$stack"
@@ -156,7 +187,7 @@ cleanup_cloudformation_stacks() {
                 log "Stack $stack deleted successfully"
             done
         else
-            log_error "Existing stacks must be deleted before reinitializing. Aborting."
+            log_error "Existing stacks and S3 buckets must be deleted before reinitializing. Aborting."
             exit 1
         fi
     else
@@ -263,13 +294,13 @@ main() {
     read -p "Enter the AWS Amplify App ID (find this in the AWS Amplify console): " AWS_AMPLIFY_APP_ID
     read -p "Enter the AWS Amplify branch name (e.g., 'main' or 'develop'): " AWS_BRANCH
 
-    echo "WARNING: This script may delete existing CloudFormation stacks associated with your Amplify project."
+    echo "WARNING: This script may delete existing CloudFormation stacks and S3 buckets associated with your Amplify project."
     echo "Please ensure you have backups of any important data before proceeding."
     read -p "Do you want to continue? (y/n) " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         log "Operation cancelled by user."
-        exit 0
+        exit 1
     fi
 
     log "Updating system..."
