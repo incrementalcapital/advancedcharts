@@ -11,8 +11,6 @@
 # Prerequisites:
 # - An AWS account with sufficient permissions to create and manage Amplify projects
 # - An existing Amplify app created in the AWS Console (you'll need the App ID)
-# - Node.js and npm installed on your system
-# - AWS CLI installed and configured with your credentials
 
 # Enable strict mode:
 # -e: Exit immediately if a command exits with a non-zero status.
