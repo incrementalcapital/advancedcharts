@@ -16,7 +16,7 @@ enum ChartType {
   OBV = 'OBV',
   AD = 'AD',
   ATR = 'ATR',
-  DMI = 'DMI'
+  SlowStoch = 'Slow Stochastic'
 }
 
 /**
@@ -78,7 +78,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   }, []);
 
   /**
- * Function to create TradingView widget configuration
+   * Function to create TradingView widget configuration
  * @param {ChartType} type - The chart type to configure
  * @param {string} sym - The current symbol for the chart
  * @returns {Object} The configuration object for TradingView widget
@@ -157,13 +157,25 @@ const createWidgetConfig = useCallback((type: ChartType, sym: string) => {
     case ChartType.OBV:
       return { ...configWithCompare, studies: ["OBV@tv-basicstudies"] };
     case ChartType.AD:
-      return { ...configWithCompare, studies: ["ACCDIST@tv-basicstudies"] };
+      return { ...configWithCompare, studies: ["ACCD@tv-basicstudies"] };
     case ChartType.ATR:
       return { ...configWithCompare, studies: ["ATR@tv-basicstudies"] };
-    case ChartType.DMI:
-      return { ...configWithCompare, studies: ["DMI@tv-basicstudies"] };
+    case ChartType.SlowStoch:
+      return { ...configWithCompare, studies: ["Stochastic@tv-basicstudies"] };
     default:
-      return { ...configWithCompare, studies: ["STD;Visible%1Average%1Price"] };
+      return { 
+        ...configWithCompare, 
+        studies: ["STD;Visible%1Average%1Price"],
+        studies_overrides: {
+          "Stochastic@tv-basicstudies.K.color": "#2962FF",  // Blue for %K line
+          "Stochastic@tv-basicstudies.D.color": "#FF6D00",  // Orange for %D line
+          "Stochastic@tv-basicstudies.smooth": true,        // This makes it a "slow" stochastic
+          "Stochastic@tv-basicstudies.k": 14,               // %K period
+          "Stochastic@tv-basicstudies.d": 3,                // %D period
+          "Stochastic@tv-basicstudies.upper_band": 80,      // Upper band (overbought)
+          "Stochastic@tv-basicstudies.lower_band": 20       // Lower band (oversold)
+        }
+      };
   }
 }, [interval, theme]);
 
@@ -227,20 +239,32 @@ const createWidgetConfig = useCallback((type: ChartType, sym: string) => {
     };
   }, [initializeWidget, cleanupWidget]);
 
+/**
+ * Effect to handle symbol changes
+ * This effect runs whenever the 'symbol' prop changes, which is expected to be frequent
+ */
+useEffect(() => {
+  if (symbol !== currentSymbol) {
+    // Update the current symbol state immediately
+    // This ensures that our component always has the latest symbol
+    setCurrentSymbol(symbol);
+    // Note: Widget reinitialization is handled in the next effect
+  }
+}, [symbol, currentSymbol]); // Dependencies: only run this effect if 'symbol' or 'currentSymbol' changes
+
   /**
-   * Effect to handle symbol changes
+   * Effect to reinitialize the widget
+   * This effect runs whenever currentSymbol or chartType changes
+   * It's separate from the symbol update effect to allow for more efficient handling of frequent symbol changes
    */
   useEffect(() => {
-    // Check if the symbol has changed
-    if (symbol !== currentSymbol) {
-      // Update the current symbol state
-      setCurrentSymbol(symbol);
-      // Clean up the existing widget
-      cleanupWidget();
-      // Reinitialize the widget with the new symbol
-      initializeWidget();
-    }
-  }, [symbol, currentSymbol, cleanupWidget, initializeWidget]);
+    // Clean up the existing widget
+    cleanupWidget();
+    // Initialize the new widget with current symbol and chart type
+    // This will update the main chart and the "_SHORT_VOLUME" chart in the "NewPane"
+    initializeWidget();
+  // This effect depends on currentSymbol, chartType, and the initializeWidget and cleanupWidget functions
+  }, [currentSymbol, chartType, initializeWidget, cleanupWidget]);
 
   /**
    * Effect to handle keyboard navigation
