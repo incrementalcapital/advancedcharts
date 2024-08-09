@@ -4,13 +4,15 @@
  * This component uses the TradingView external embedding script to display
  * a fully-featured chart with customizable settings.
  */
-import React, { useEffect, useRef, useState } from 'react';
+
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 /**
+ * Props for the TradingViewWidget component.
  * @typedef {Object} TradingViewWidgetProps
  * @property {string} [symbol='NASDAQ:NVDA'] - The default symbol to display on the chart.
  * @property {string} [interval='D'] - The default time interval for the chart.
- * @property {string} [theme='dark'] - The color theme of the widget ('light' or 'dark').
+ * @property {('light'|'dark')} [theme='dark'] - The color theme of the widget.
  */
 interface TradingViewWidgetProps {
   symbol?: string;
@@ -18,6 +20,9 @@ interface TradingViewWidgetProps {
   theme?: 'light' | 'dark';
 }
 
+/**
+ * Extends the global Window interface to include the TradingView property.
+ */
 declare global {
   interface Window {
     TradingView: any;
@@ -29,23 +34,40 @@ declare global {
  * @param {TradingViewWidgetProps} props - The props for the TradingViewWidget component
  * @returns {JSX.Element} The rendered TradingView widget
  */
-
 const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   symbol = 'NASDAQ:NVDA',
   interval = 'D',
   theme = 'dark'
 }) => {
-  const container = useRef<HTMLDivElement>(null);
+  // Reference to the container div element
+  const containerRef = useRef<HTMLDivElement>(null);
+  // State to track loading status
   const [loading, setLoading] = useState(true);
+  // State to track error status
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Cleanup function to remove the TradingView widget
+   */
+  const cleanupWidget = useCallback(() => {
+    if (containerRef.current) {
+      containerRef.current.innerHTML = '';
+    }
+  }, []);
+
   useEffect(() => {
+    // Create a script element to load the TradingView library
     const script = document.createElement('script');
     script.src = 'https://s3.tradingview.com/tv.js';
     script.async = true;
+
+    /**
+     * Callback function when the script is loaded successfully
+     */
     script.onload = () => {
-      if (container.current) {
+      if (containerRef.current) {
         try {
+          // Initialize the TradingView widget
           new window.TradingView.widget({
             autosize: true,
             symbol: symbol,
@@ -81,7 +103,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
             show_popup_button: true,
             popup_width: "1000",
             popup_height: "650",
-            container_id: container.current.id,
+            container_id: containerRef.current.id,
           });
           setLoading(false);
         } catch (err) {
@@ -90,29 +112,35 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
         }
       }
     };
+
+    /**
+     * Callback function when the script fails to load
+     */
     script.onerror = () => {
       setError("Failed to load TradingView library");
       setLoading(false);
     };
 
+    // Append the script to the document head
     document.head.appendChild(script);
 
+    // Cleanup function to remove the script and widget when component unmounts
     return () => {
-      if (container.current) {
-        container.current.innerHTML = '';
-      }
+      cleanupWidget();
       document.head.removeChild(script);
     };
-  }, [symbol, interval, theme]);
+  }, [symbol, interval, theme, cleanupWidget]);
 
+  // Render error message if there's an error
   if (error) {
     return <div>Error: {error}</div>;
   }
 
+  // Render the TradingView widget
   return (
     <div style={{ height: "100%", width: "100%" }}>
       {loading && <div>Loading TradingView widget...</div>}
-      <div id="tradingview_widget" ref={container} style={{ height: "calc(100% - 32px)", width: "100%" }} />
+      <div id="tradingview_widget" ref={containerRef} style={{ height: "calc(100% - 32px)", width: "100%" }} />
       <div className="tradingview-widget-copyright">
         <a href="https://www.tradingview.com/" rel="noopener noreferrer" target="_blank">
           <span className="blue-text">Track all markets on TradingView</span>
