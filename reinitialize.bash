@@ -373,13 +373,6 @@ main() {
     # Initialize or reinitialize Amplify project
     initialize_amplify_project
 
-    # Check if Amplify created a nested directory
-    if [ -d "$project_name" ] && [ -d "$project_name/amplify" ]; then
-        log "Detected nested project directory. Adjusting structure..."
-        mv "$project_name"/* "$project_name"/.* .
-        rmdir "$project_name"
-    fi
-
     # Install and validate project dependencies
     install_and_validate_dependencies
 
