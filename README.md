@@ -71,7 +71,7 @@ bash transfer-aws-configuration.bash
 Clone this repository to your local machine or remote environment:
 
 ```bash
-git clone https://github.com/incrementalcapitalist/typescript-amplifier.git
+git clone https://github.com/incrementalcapital/advancedcharts.git
 cd typescript-amplifier
 ```
 
@@ -175,7 +175,7 @@ If you need to set up your existing TypeScript/React Amplify project on a new EC
 2. SSH into your new EC2 instance.
 3. Clone or copy your project to your local machine or remote environment:
    ```bash
-   git clone https://github.com/incrementalcapitalist/typescript-amplifier.git
+   git clone git@github.com:incrementalcapital/advancedcharts.git
    cd typescript-amplifier
    ```
 4. Run the reinitialization script:
