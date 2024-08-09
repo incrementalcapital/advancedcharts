@@ -10,7 +10,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
  * @enum {string}
  */
 enum ChartType {
-  HeikinAshi = 'Heikin-Ashi',
+  ShortInterest = 'Short Interest', // New chart type replacing HeikinAshi
   MACD = 'MACD',
   RSI = 'RSI',
   OBV = 'OBV',
@@ -61,7 +61,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // State to track the current chart type
-  const [chartType, setChartType] = useState<ChartType>(ChartType.HeikinAshi);
+  const [chartType, setChartType] = useState<ChartType>(ChartType.ShortInterest);
 
   // State to track the current symbol
   const [currentSymbol, setCurrentSymbol] = useState(symbol);
@@ -79,105 +79,113 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
 
   /**
    * Function to create TradingView widget configuration
- * @param {ChartType} type - The chart type to configure
- * @param {string} sym - The current symbol for the chart
- * @returns {Object} The configuration object for TradingView widget
- */
-const createWidgetConfig = useCallback((type: ChartType, sym: string) => {
-  // Extract the stock symbol without the exchange prefix
+   * @param {ChartType} type - The chart type to configure
+   * @param {string} sym - The current symbol for the chart
+   * @returns {Object} The configuration object for TradingView widget
+   */
+  const createWidgetConfig = useCallback((type: ChartType, sym: string) => {
+    // Extract the stock symbol without the exchange prefix
   // This line splits the symbol string at the colon and takes the last part
   // If there's no colon, it will use the whole string
   // The || 'NVDA' is a fallback in case the split operation fails
-  const stockSymbol = sym.split(':').pop() || 'NVDA';
+    const stockSymbol = sym.split(':').pop() || 'NVDA';
 
-  // Define the base configuration for the TradingView widget
-  const baseConfig = {
-    autosize: true,
+    // Define the base configuration for the TradingView widget
+    const baseConfig = {
+      autosize: true,
     symbol: sym,  // Use the provided symbol here
-    interval: interval,
-    timezone: "Etc/UTC",
-    theme: theme,
-    style: "8",
-    locale: "en",
-    backgroundColor: "rgba(0, 0, 0, 1)",
-    gridColor: "rgba(0, 0, 0, 1)",
-    toolbar_bg: "rgba(0, 0, 0, 1)",
-    enable_publishing: false,
-    withdateranges: true,
-    hide_side_toolbar: false,
-    allow_symbol_change: true,
-    watchlist: [
-      "NASDAQ:NVDA",
-      "NYSE:TSM"
-    ],
-    details: true,
-    hotlist: true,
-    calendar: true,
-    show_popup_button: true,
-    popup_width: "1000",
-    popup_height: "650",
-    container_id: containerRef.current?.id,
-  };
+      interval: interval,
+      timezone: "Etc/UTC",
+      theme: theme,
+      style: "8",
+      locale: "en",
+      backgroundColor: "rgba(0, 0, 0, 1)",
+      gridColor: "rgba(0, 0, 0, 1)",
+      toolbar_bg: "rgba(0, 0, 0, 1)",
+      enable_publishing: false,
+      withdateranges: true,
+      hide_side_toolbar: false,
+      allow_symbol_change: true,
+      watchlist: [
+        "NASDAQ:AMAT",
+        "NASDAQ:ARM",
+        "NASDAQ:QCOM",
+        "NASDAQ:NVDA",
+        "NYSE:TSM"
+      ],
+      details: true,
+      hotlist: true,
+      calendar: true,
+      show_popup_button: true,
+      popup_width: "1000",
+      popup_height: "650",
+      container_id: containerRef.current?.id,
+    };
 
-  // Define compareSymbols based on the chart type
-  // This is where we dynamically construct the short volume symbol
-  const compareSymbols = type === ChartType.HeikinAshi
-    ? [
-        {
-          // Use the current stockSymbol for the short volume comparison
+    // Define compare symbols and studies based on the chart type
+    let compareSymbols = [];
+    let studies = [];
+
+    switch (type) {
+      case ChartType.ShortInterest:
+        // For Short Interest, we add the short volume as a compare symbol and MFI as a study
+        compareSymbols = [{
           "symbol": `FINRA:${stockSymbol}_SHORT_VOLUME`,
-          "position": "NewPane"
-        },
-        {
-          "symbol": "CME_MINI:ES1!",
+          "title": "Short Volume",
+          "position": "NewPriceScale" // Changed from "NewPane" to "NewPriceScale"
+        }];
+        studies = ["STD;Visible%1Average%1Price", "MFI@tv-basicstudies"]; // Money Flow Index study
+        break;
+      case ChartType.MACD:
+        compareSymbols = [{
+          "symbol": "CME_MINI:NQ1!", // Nasdaq 100 futures
           "position": "NewPriceScale"
-        }
-      ]
-    : [
-        {
-          "symbol": "CME_MINI:ES1!",
+        }];
+        studies = ["MACD@tv-basicstudies"];
+        break;
+      case ChartType.RSI:
+        compareSymbols = [{
+          "symbol": "CME_MINI:ES1!", // S&P 500 futures
           "position": "NewPriceScale"
-        }
-      ];
+        }];
+        studies = ["RSI@tv-basicstudies"];
+        break;
+      case ChartType.OBV:
+        studies = ["OBV@tv-basicstudies"];
+        break;
+      case ChartType.AD:
+        studies = ["ACCD@tv-basicstudies"];
+        break;
+      case ChartType.ATR:
+        studies = ["ATR@tv-basicstudies"];
+        break;
+      case ChartType.SlowStoch:
+        studies = ["Stochastic@tv-basicstudies"];
+        break;
+    }
 
-  // Add compareSymbols to the configuration
-  const configWithCompare = {
-    ...baseConfig,
-    compareSymbols
-  };
-
-  // Add specific studies based on the chart type
-  switch (type) {
-    case ChartType.HeikinAshi:
-      return { ...configWithCompare, studies: ["STD;Visible%1Average%1Price"] };
-    case ChartType.MACD:
-      return { ...configWithCompare, studies: ["MACD@tv-basicstudies"] };
-    case ChartType.RSI:
-      return { ...configWithCompare, studies: ["RSI@tv-basicstudies"] };
-    case ChartType.OBV:
-      return { ...configWithCompare, studies: ["OBV@tv-basicstudies"] };
-    case ChartType.AD:
-      return { ...configWithCompare, studies: ["ACCD@tv-basicstudies"] };
-    case ChartType.ATR:
-      return { ...configWithCompare, studies: ["ATR@tv-basicstudies"] };
-    case ChartType.SlowStoch:
-      return { ...configWithCompare, studies: ["Stochastic@tv-basicstudies"] };
-    default:
-      return { 
-        ...configWithCompare, 
-        studies: ["STD;Visible%1Average%1Price"],
-        studies_overrides: {
-          "Stochastic@tv-basicstudies.K.color": "#2962FF",  // Blue for %K line
-          "Stochastic@tv-basicstudies.D.color": "#FF6D00",  // Orange for %D line
-          "Stochastic@tv-basicstudies.smooth": true,        // This makes it a "slow" stochastic
-          "Stochastic@tv-basicstudies.k": 14,               // %K period
-          "Stochastic@tv-basicstudies.d": 3,                // %D period
-          "Stochastic@tv-basicstudies.upper_band": 80,      // Upper band (overbought)
-          "Stochastic@tv-basicstudies.lower_band": 20       // Lower band (oversold)
-        }
-      };
-  }
-}, [interval, theme]);
+    // Combine the base configuration with compare symbols and studies
+    return {
+      ...baseConfig,
+      compareSymbols,
+      studies,
+      studies_overrides: {
+        // Default overrides for studies (can be expanded for specific studies)
+        "volume.volume.color.0": "#00FFFF",
+        "volume.volume.color.1": "#0000FF",
+        "volume.volume.transparency": 50,
+        "MFI@tv-basicstudies.plot.color": "#FF6D00", // Orange color for MFI
+        "MFI@tv-basicstudies.plot.linewidth": 2,
+        "Stochastic@tv-basicstudies.K.color": "#2962FF", // Blue for %K line
+        "Stochastic@tv-basicstudies.D.color": "#FF6D00", // Orange for %D line
+        "Stochastic@tv-basicstudies.smooth": true,
+        "Stochastic@tv-basicstudies.k": 14,
+        "Stochastic@tv-basicstudies.d": 3,
+        "Stochastic@tv-basicstudies.upper_band": 80,
+        "Stochastic@tv-basicstudies.lower_band": 20
+      }
+    };
+  }, [interval, theme]);
 
   /**
    * Function to initialize or reinitialize the TradingView widget
@@ -239,17 +247,17 @@ const createWidgetConfig = useCallback((type: ChartType, sym: string) => {
     };
   }, [initializeWidget, cleanupWidget]);
 
-/**
- * Effect to handle symbol changes
+  /**
+   * Effect to handle symbol changes
  * This effect runs whenever the 'symbol' prop changes, which is expected to be frequent
- */
-useEffect(() => {
-  if (symbol !== currentSymbol) {
+   */
+  useEffect(() => {
+    if (symbol !== currentSymbol) {
     // Update the current symbol state immediately
     // This ensures that our component always has the latest symbol
-    setCurrentSymbol(symbol);
+      setCurrentSymbol(symbol);
     // Note: Widget reinitialization is handled in the next effect
-  }
+    }
 }, [symbol, currentSymbol]); // Dependencies: only run this effect if 'symbol' or 'currentSymbol' changes
 
   /**
