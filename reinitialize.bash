@@ -108,7 +108,7 @@ install_node_and_nvm() {
         # Check if Node.js is installed, if not install it
         if ! command -v node &> /dev/null; then
             log "Installing Node.js using NVM..."
-            nvm install node || { log_error "Node.js installation failed"; exit 1; }
+    nvm install node || { log_error "Node.js installation failed"; exit 1; }
             nvm use node
         else
             log "Node.js is already installed."
@@ -133,6 +133,24 @@ javascript
 ${AWS_PROFILE}
 EOF
     log "Note: You may see a message 'Headless mode is not implemented for @aws-amplify/cli-internal'. This can be ignored if the script continues to run successfully."
+}
+
+# Function to install and validate project dependencies
+install_and_validate_dependencies() {
+    log "Cleaning npm cache..."
+    npm cache clean --force
+
+    log "Removing existing node_modules and package-lock.json..."
+    rm -rf node_modules package-lock.json
+
+    log "Installing project dependencies..."
+    npm install || { log_error "Failed to install project dependencies"; exit 1; }
+
+    log "Checking for outdated packages..."
+    npm outdated
+
+    log "Building the project..."
+    npm run build || { log_error "Failed to build the project"; exit 1; }
 }
 
 # Main function that orchestrates the entire setup process
@@ -178,8 +196,7 @@ main() {
     check_command amplify
 
     # Install project dependencies
-    log "Installing project dependencies..."
-    npm install || { log_error "Failed to install project dependencies"; exit 1; }
+    install_and_validate_dependencies
 
     # Configure AWS CLI
     configure_aws_cli
@@ -187,7 +204,12 @@ main() {
     # Configure Amplify CLI
     configure_amplify_cli
 
-    log "TypeScript Amplifier setup completed successfully!"
+    log "TypeScript Amplifier setup completed successfully!"    log "Setup completed successfully!"
+    log "To ensure all changes take effect, please do one of the following:"
+    log "1. Log out and log back in, or"
+    log "2. Run the following command: source ~/.bashrc"
+    log "After that, you can run 'npm start' to start the development server."
+    log "If you encounter any issues, try serving the built version with: npx serve -s build"
     log "Your AWS Amplify Gen 2 project with React and TypeScript is now ready."
     log "Next steps:"
     log "1. Review the project structure and configurations."
