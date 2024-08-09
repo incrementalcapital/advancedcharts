@@ -4,6 +4,14 @@
 
 This repository provides a starter template for AWS Amplify Gen 2 development with TypeScript and React. It includes a bash script (`initialize.bash`) that automates the setup of the necessary tools and configuration for AWS Amplify on a new environment.
 
+Key features:
+
+ - Automated setup of AWS Amplify Gen 2 environment
+ - TypeScript and React integration out of the box
+ - Tailwind CSS configuration for rapid UI development
+ - Easy transfer of AWS credentials to remote environments
+ - Scripts for both initial setup and reinitialization on new instances
+
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
@@ -35,6 +43,17 @@ Before running the setup script, ensure you have the following:
 - `reinitialize.bash`: Script to set up an existing TypeScript/React Amplify project on a new EC2 instance.
 
 ## Setup Instructions
+
+### 0. Create Amplify App in AWS Console
+
+Before running the initialization script, you need to create an Amplify app in the AWS Console:
+
+ 1. Sign in to the AWS Management Console.
+ 2. Navigate to the AWS Amplify service.
+ 3. Click "New app" and select "Build an app".
+ 4. Choose a name for your app and select your preferred Git provider (or "Deploy without Git provider" if you prefer).
+ 5. Follow the prompts to complete the app creation.
+ 6. Once created, note down the App ID from the app information section. You'll need this when running the initialization script.
 
 ### 1. Copy AWS Credentials
 
