@@ -31,10 +31,6 @@ get_host_details() {
     ' "$HOME/.ssh/config")
 
     # Extract the 'HostName' field from the details and assign it to REMOTE_HOST.
-    echo "Raw details for host '$host':"
-    echo "$details"
-
-    # Extract the 'User' field from the details and assign it to REMOTE_USER.
     REMOTE_HOST=$(echo "$details" | awk '$1 == "HostName" {print $2; exit}')
     REMOTE_USER=$(echo "$details" | awk '$1 == "User" {print $2; exit}')
     # Extract the 'IdentityFile' field from the details and assign it to SSH_KEY_PATH.
