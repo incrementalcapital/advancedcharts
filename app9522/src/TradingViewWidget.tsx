@@ -17,6 +17,7 @@ function TradingViewWidget() {
         "theme": "dark",
         "style": "8",
         "locale": "en",
+        "backgroundColor": "rgba(0, 0, 0, 1)",
         "gridColor": "rgba(0, 0, 0, 1)",
         "withdateranges": true,
         "hide_side_toolbar": false,
@@ -36,7 +37,10 @@ function TradingViewWidget() {
         ],
         "details": true,
         "hotlist": true,
-        "calendar": false,
+        "calendar": true,
+        "studies": [
+            "STD;Visible%1Average%1Price"
+          ],
         "show_popup_button": true,
         "popup_width": "1000",
         "popup_height": "650",
