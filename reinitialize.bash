@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # TypeScript Amplifier: AWS Amplify Gen 2 Project Setup Script
-# Version: 1.3
+# Version: 1.4
 # Author: Incremental Capitalist
 # Date: Friday, August 9th, 2024
 #
-# This script automates the setup process for an existing AWS Amplify Gen 2 project with React and TypeScript.
-# It handles system updates, installation of necessary tools, and "re-initialization" of an existing Amplify project.
+# This script automates the setup process for an AWS Amplify Gen 2 project with React and TypeScript.
+# It handles system updates, installation of necessary tools, and initialization or update of an Amplify project.
 #
 # Prerequisites:
 # - An AWS account with sufficient permissions to create and manage Amplify projects
@@ -135,7 +135,35 @@ EOF
     log "Note: You may see a message 'Headless mode is not implemented for @aws-amplify/cli-internal'. This can be ignored if the script continues to run successfully."
 }
 
-# Function to initialize or reinitialize Amplify project
+# Function to cleaup Cloud Formation Stacks used by Amplify
+cleanup_cloudformation_stacks() {
+    local app_id="$1"
+    local env_name="$2"
+    
+    log "Checking for existing CloudFormation stacks..."
+    
+    local stacks=$(aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE --query "StackSummaries[?contains(StackName, '${app_id}') && contains(StackName, '${env_name}')].StackName" --output text)
+    
+    if [ -n "$stacks" ]; then
+        log "Found existing stacks: $stacks"
+        read -p "Do you want to delete these stacks? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            for stack in $stacks; do
+                log "Deleting stack: $stack"
+                aws cloudformation delete-stack --stack-name "$stack"
+                aws cloudformation wait stack-delete-complete --stack-name "$stack"
+                log "Stack $stack deleted successfully"
+            done
+        else
+            log_error "Existing stacks must be deleted before reinitializing. Aborting."
+            exit 1
+        fi
+    else
+        log "No existing CloudFormation stacks found."
+    fi
+}
+
 initialize_amplify_project() {
     log "Navigating to project directory..."
     mkdir -p "$project_name"
@@ -143,8 +171,25 @@ initialize_amplify_project() {
 
     log "Checking for existing Amplify project..."
     if [ -d "amplify" ]; then
-        log "Existing Amplify project found. Reinitializing..."
-        amplify init --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" || { log_error "Amplify reinitialization failed"; exit 1; }
+        log "Existing Amplify project found."
+        read -p "Do you want to update the existing project (u), reinitialize from scratch (r), or cancel (c)? " -n 1 -r
+        echo
+        case $REPLY in
+            u|U)
+                log "Updating existing Amplify project..."
+                amplify pull --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" || { log_error "Amplify pull failed"; exit 1; }
+                ;;
+            r|R)
+                log "Reinitializing Amplify project from scratch..."
+                cleanup_cloudformation_stacks "$AWS_AMPLIFY_APP_ID" "$AWS_BRANCH"
+                rm -rf amplify
+                amplify init --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" || { log_error "Amplify initialization failed"; exit 1; }
+                ;;
+            *)
+                log "Operation cancelled by user."
+                exit 0
+                ;;
+        esac
     else
         log "No existing Amplify project found. Initializing new project..."
         amplify init --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" || { log_error "Amplify initialization failed"; exit 1; }
@@ -218,7 +263,15 @@ main() {
     read -p "Enter the AWS Amplify App ID (find this in the AWS Amplify console): " AWS_AMPLIFY_APP_ID
     read -p "Enter the AWS Amplify branch name (e.g., 'main' or 'develop'): " AWS_BRANCH
 
-    # Update and upgrade the system
+    echo "WARNING: This script may delete existing CloudFormation stacks associated with your Amplify project."
+    echo "Please ensure you have backups of any important data before proceeding."
+    read -p "Do you want to continue? (y/n) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log "Operation cancelled by user."
+        exit 0
+    fi
+
     log "Updating system..."
     sudo apt update && sudo apt full-upgrade -y || { log_error "System update failed"; exit 1; }
 
@@ -289,7 +342,7 @@ main() {
 # Run the main function
 main
 
-# Note: This script sets up an existing Gen 2 AWS Amplify project with React and TypeScript.
+# Note: This script sets up or updates an AWS Amplify Gen 2 project with React and TypeScript.
 # It's designed for users who want to leverage the latest Amplify features in a TypeScript environment.
 # Make sure to have an existing Amplify app in the AWS console before running this script.
 # For any issues or improvements, please submit an issue or pull request to the typescript-amplifier repository.
