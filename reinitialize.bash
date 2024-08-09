@@ -90,6 +90,16 @@ configure_aws_cli() {
     export AWS_PROFILE
 }
 
+# Function to validate AWS CLI configuration
+validate_aws_cli() {
+    log "Validating AWS CLI configuration..."
+    if ! aws sts get-caller-identity &>/dev/null; then
+        log_error "Failed to validate AWS CLI configuration. Please ensure your AWS credentials are correct and you have the necessary permissions."
+        exit 1
+    fi
+    log "AWS CLI configuration validated successfully."
+}
+
 # Function to install NVM and Node.js
 install_node_and_nvm() {
     if [ ! -d "$HOME/.nvm" ]; then
@@ -348,6 +358,9 @@ main() {
 
     # Configure AWS CLI
     configure_aws_cli
+
+    # Validate AWS CLI configuration
+    validate_aws_cli
 
     # Configure Amplify CLI
     configure_amplify_cli
