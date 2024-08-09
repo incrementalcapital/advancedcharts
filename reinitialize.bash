@@ -195,16 +195,25 @@ cleanup_cloudformation_stacks() {
     fi
 }
 
+# Function to initialize or pull an Amplify project
 initialize_amplify_project() {
     log "Checking for existing Amplify project..."
-    if [ -d "amplify" ]; then
-        log "Existing Amplify project found."
-        read -p "Do you want to update the existing project (u), reinitialize from scratch (r), or cancel (c)? " -n 1 -r
+    
+    # Check if the project exists in the cloud
+    if amplify env list --appId "$AWS_AMPLIFY_APP_ID" 2>/dev/null | grep -q "$AWS_BRANCH"; then
+        log "Existing Amplify project found in the cloud."
+        if [ -d "amplify" ]; then
+            log "Local Amplify configuration found."
+            read -p "Do you want to update the existing project (u), reinitialize from scratch (r), or cancel (c)? " -n 1 -r
+        else
+            log "No local Amplify configuration found."
+            read -p "Do you want to pull the existing project (p), reinitialize from scratch (r), or cancel (c)? " -n 1 -r
+        fi
         echo
         case $REPLY in
-            u|U)
-                log "Updating existing Amplify project..."
-                amplify pull --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" || { log_error "Amplify pull failed"; exit 1; }
+            u|U|p|P)
+                log "Pulling existing Amplify project..."
+                amplify pull --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" --yes || { log_error "Amplify pull failed"; exit 1; }
                 ;;
             r|R)
                 log "Reinitializing Amplify project from scratch..."
@@ -221,7 +230,7 @@ initialize_amplify_project() {
                 ;;
         esac
     else
-        log "No existing Amplify project found. Initializing new project..."
+        log "No existing Amplify project found in the cloud. Initializing new project..."
         amplify init --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" \
                      --frontend javascript \
                      --javascript react \
