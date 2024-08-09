@@ -38,6 +38,11 @@ get_host_details() {
 
     # Extract the 'IdentityFile' field from the details and assign it to SSH_KEY_PATH.
     SSH_KEY_PATH=$(echo "$details" | grep 'IdentityFile' | awk '{print $2}')
+
+    # Debug statements to verify the extracted values
+    echo "REMOTE_HOST: $REMOTE_HOST"
+    echo "REMOTE_USER: $REMOTE_USER"
+    echo "SSH_KEY_PATH: $SSH_KEY_PATH"
 }
 
 # Ensure SSH config file exists
