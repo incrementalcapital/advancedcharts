@@ -1,22 +1,27 @@
 #!/bin/bash
 
-# Function to extract hosts from ~/.ssh/config
-# This function uses 'grep' to find all lines starting with 'Host ' in the SSH config file.
-# It then uses 'awk' to print the second field (which is the hostname).
+# Script: AWS Configuration Synchronization
+# Purpose: This script synchronizes AWS configuration files from a local machine to a remote server.
+#          It allows users to select a host from their SSH config and transfers AWS credentials securely.
+
+# Function: extract_hosts
+# Purpose: Extract host names from the user's SSH config file
+# Usage: hosts=($(extract_hosts))
 extract_hosts() {
     grep -E '^Host ' "$HOME/.ssh/config" | awk '{print $2}'
 }
 
-# Function to get host details from ~/.ssh/config
-# This function takes a hostname as an argument and retrieves all configuration details
-# for that host from the SSH config file.
+# Function: get_host_details
+# Purpose: Retrieve details for a specific host from the SSH config file
+# Parameters: $1 - The host name to look up
+# Usage: get_host_details "my-host"
 get_host_details() {
     # Assign the first argument (hostname) to a local variable 'host'.
     local host=$1
-    
+
     # 'details' variable holds the configuration details for the given host.
     # The 'awk' script searches for the "Host" line that matches the given host
-    # and then captures all subsequent lines until another "Host" entry or a line 
+    # and then captures all subsequent lines until another "Host" entry or a line
     # starting with a letter is encountered.
     local details
     details=$(awk -v host="$host" '
@@ -27,10 +32,10 @@ get_host_details() {
 
     # Extract the 'HostName' field from the details and assign it to REMOTE_HOST.
     REMOTE_HOST=$(echo "$details" | grep 'HostName' | awk '{print $2}')
-    
+
     # Extract the 'User' field from the details and assign it to REMOTE_USER.
     REMOTE_USER=$(echo "$details" | grep 'User' | awk '{print $2}')
-    
+
     # Extract the 'IdentityFile' field from the details and assign it to SSH_KEY_PATH.
     SSH_KEY_PATH=$(echo "$details" | grep 'IdentityFile' | awk '{print $2}')
 }
@@ -81,6 +86,7 @@ REMOTE_AWS_DIR="/home/$REMOTE_USER/.aws"
 # Changes the permissions of the SSH config file to 600 (read/write for the owner only),
 # which is a security best practice for SSH configuration files.
 chmod 600 "$HOME/.ssh/config"
+echo "SSH config updated successfully."
 
 # Check if .aws directory exists locally
 # If the local AWS configuration directory does not exist, the script exits with an error message.
@@ -92,15 +98,34 @@ fi
 # Create .aws directory on remote server if it doesn't exist
 # Uses SSH to connect to the remote server (using the alias 'amplify-development-server')
 # and creates the AWS configuration directory if it doesn't already exist.
-ssh amplify-development-server "mkdir -p $REMOTE_AWS_DIR"
+ssh "$selected_host" "mkdir -p $REMOTE_AWS_DIR"
 
-# Sync .aws directory to remote server
+# Sync .aws directory to remote server using rsync
+echo "Syncing AWS configuration files..."
 # Uses 'rsync' to synchronize the local AWS configuration directory with the remote one.
 # The '-avz' options stand for archive mode, verbose output, and compression during transfer.
 # The '--delete' option ensures that any files not present locally are deleted from the remote directory.
 # '-e ssh' specifies that SSH should be used for the connection.
-rsync -avz --delete -e ssh "$AWS_CONFIG_DIR/" "amplify-development-server:$REMOTE_AWS_DIR"
+rsync -avz --delete --progress -e ssh "$AWS_CONFIG_DIR/" "$selected_host:$REMOTE_AWS_DIR"
 
 # Final message to indicate success
 # Once the transfer is complete, the script outputs a success message.
 echo "AWS configuration files transferred successfully."
+
+# Offer to open an SSH session to the remote server
+prompt_yes_no() {
+    while true; do
+        read -p "$1 (y/n): " yn
+        case $yn in
+            [Yy]* ) return 0;;
+            [Nn]* ) return 1;;
+            * ) echo "Please answer yes or no.";;
+        esac
+    done
+}
+
+if prompt_yes_no "Would you like to open an SSH session to the remote server?"; then
+    ssh "$selected_host"
+else
+    echo "Script completed. You can connect to the remote server using 'ssh ${selected_host}'"
+fi
