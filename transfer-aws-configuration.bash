@@ -25,19 +25,20 @@ get_host_details() {
     # starting with a letter is encountered.
     local details
     details=$(awk -v host="$host" '
-        $1 == "Host" && $2 == host {flag=1; next} # Set flag when the correct host is found
-        flag && $1 ~ /^[A-Za-z]/ {flag=0}         # Reset flag when a new entry starts
-        flag {print $0}                           # Print details while flag is set
+        $1 == "Host" && $0 ~ host {flag=1; next}    # Set flag when the correct host is found
+        flag && /^Host / {flag=0}                   # Reset flag when a new entry starts
+        flag {print $0}                             # Print details while flag is set
     ' "$HOME/.ssh/config")
 
     # Extract the 'HostName' field from the details and assign it to REMOTE_HOST.
-    REMOTE_HOST=$(echo "$details" | grep 'HostName' | awk '{print $2}')
+    echo "Raw details for host '$host':"
+    echo "$details"
 
     # Extract the 'User' field from the details and assign it to REMOTE_USER.
-    REMOTE_USER=$(echo "$details" | grep 'User' | awk '{print $2}')
-
+    REMOTE_HOST=$(echo "$details" | awk '$1 == "HostName" {print $2; exit}')
+    REMOTE_USER=$(echo "$details" | awk '$1 == "User" {print $2; exit}')
     # Extract the 'IdentityFile' field from the details and assign it to SSH_KEY_PATH.
-    SSH_KEY_PATH=$(echo "$details" | grep 'IdentityFile' | awk '{print $2}')
+    SSH_KEY_PATH=$(echo "$details" | awk '$1 == "IdentityFile" {print $2; exit}')
 
     # Debug statements to verify the extracted values
     echo "REMOTE_HOST: $REMOTE_HOST"
