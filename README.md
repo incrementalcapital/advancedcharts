@@ -17,15 +17,18 @@ Key features:
 1. [Prerequisites](#prerequisites)
 2. [Repository Contents](#repository-contents)
 3. [Setup Instructions](#setup-instructions)
+   - [Create Amplify App in AWS Console](#0-create-amplify-app-in-aws-console)
    - [Copy AWS Credentials](#1-copy-aws-credentials)
    - [Clone the Repository](#2-clone-the-repository)
    - [Run the Initialization Script](#3-run-the-initialization-script)
 4. [Script Workflow](#script-workflow)
 5. [Verify Installation](#verify-installation)
 6. [Start Developing with AWS Amplify](#start-developing-with-aws-amplify)
-7. [Troubleshooting](#troubleshooting)
-8. [Contributing](#contributing)
-9. [License](#license)
+7. [Script Details](#script-details)
+8. [Troubleshooting](#troubleshooting)
+9. [Reinitializing on a New EC2 Instance](#reinitializing-on-a-new-ec2-instance)
+10. [Contributing](#contributing)
+11. [License](#license)
 
 ## Prerequisites
 
