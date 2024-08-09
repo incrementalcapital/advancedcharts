@@ -53,18 +53,24 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
 }) => {
   // Reference to the container div element
   const containerRef = useRef<HTMLDivElement>(null);
+
   // State to track loading status
   const [loading, setLoading] = useState(true);
+
   // State to track error status
   const [error, setError] = useState<string | null>(null);
+
   // State to track the current chart type
   const [chartType, setChartType] = useState<ChartType>(ChartType.HeikinAshi);
+
+  // State to track the current symbol
+  const [currentSymbol, setCurrentSymbol] = useState(symbol);
 
   /**
    * Cleanup function to remove the TradingView widget
    */
   const cleanupWidget = useCallback(() => {
-    // Check if the container ref is available
+    // Check if the container ref is available and has content
     if (containerRef.current) {
       // Clear the contents of the container
       containerRef.current.innerHTML = '';
@@ -74,16 +80,20 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   /**
  * Function to create TradingView widget configuration
  * @param {ChartType} type - The chart type to configure
+ * @param {string} sym - The current symbol for the chart
  * @returns {Object} The configuration object for TradingView widget
  */
-const createWidgetConfig = useCallback((type: ChartType) => {
+const createWidgetConfig = useCallback((type: ChartType, sym: string) => {
   // Extract the stock symbol without the exchange prefix
-  const stockSymbol = symbol.split(':').pop() || 'NVDA';
+  // This line splits the symbol string at the colon and takes the last part
+  // If there's no colon, it will use the whole string
+  // The || 'NVDA' is a fallback in case the split operation fails
+  const stockSymbol = sym.split(':').pop() || 'NVDA';
 
   // Define the base configuration for the TradingView widget
   const baseConfig = {
     autosize: true,
-    symbol: symbol,
+    symbol: sym,  // Use the provided symbol here
     interval: interval,
     timezone: "Etc/UTC",
     theme: theme,
@@ -100,17 +110,6 @@ const createWidgetConfig = useCallback((type: ChartType) => {
       "NASDAQ:NVDA",
       "NYSE:TSM"
     ],
-    compareSymbols: [
-      {
-        // Dynamically generate the short volume symbol
-        "symbol": `FINRA:${stockSymbol}_SHORT_VOLUME`,
-        "position": "NewPane"
-      },
-      {
-        "symbol": "CME_MINI:ES1!",
-        "position": "NewPriceScale"
-      }
-    ],
     details: true,
     hotlist: true,
     calendar: true,
@@ -120,24 +119,72 @@ const createWidgetConfig = useCallback((type: ChartType) => {
     container_id: containerRef.current?.id,
   };
 
+  // Define compareSymbols based on the chart type
+  // This is where we dynamically construct the short volume symbol
+  const compareSymbols = type === ChartType.HeikinAshi
+    ? [
+        {
+          // Use the current stockSymbol for the short volume comparison
+          "symbol": `FINRA:${stockSymbol}_SHORT_VOLUME`,
+          "position": "NewPane"
+        },
+        {
+          "symbol": "CME_MINI:ES1!",
+          "position": "NewPriceScale"
+        }
+      ]
+    : [
+        {
+          "symbol": "CME_MINI:ES1!",
+          "position": "NewPriceScale"
+        }
+      ];
+
+  // Add compareSymbols to the configuration
+  const configWithCompare = {
+    ...baseConfig,
+    compareSymbols
+  };
+
   // Add specific studies based on the chart type
   switch (type) {
+    case ChartType.HeikinAshi:
+      return { ...configWithCompare, studies: ["STD;Visible%1Average%1Price"] };
     case ChartType.MACD:
-      return { ...baseConfig, studies: ["STD;Visible%1Average%1Price", "MACD@tv-basicstudies"] };
+      return { ...configWithCompare, studies: ["MACD@tv-basicstudies"] };
     case ChartType.RSI:
-      return { ...baseConfig, studies: ["STD;Visible%1Average%1Price", "RSI@tv-basicstudies"] };
+      return { ...configWithCompare, studies: ["RSI@tv-basicstudies"] };
     case ChartType.OBV:
-      return { ...baseConfig, studies: ["STD;Visible%1Average%1Price", "OBV@tv-basicstudies"] };
+      return { ...configWithCompare, studies: ["OBV@tv-basicstudies"] };
     case ChartType.AD:
-      return { ...baseConfig, studies: ["STD;Visible%1Average%1Price", "ACCDIST@tv-basicstudies"] };
+      return { ...configWithCompare, studies: ["ACCDIST@tv-basicstudies"] };
     case ChartType.ATR:
-      return { ...baseConfig, studies: ["STD;Visible%1Average%1Price", "ATR@tv-basicstudies"] };
+      return { ...configWithCompare, studies: ["ATR@tv-basicstudies"] };
     case ChartType.DMI:
-      return { ...baseConfig, studies: ["STD;Visible%1Average%1Price", "DMI@tv-basicstudies"] };
+      return { ...configWithCompare, studies: ["DMI@tv-basicstudies"] };
     default:
-      return { ...baseConfig, studies: ["STD;Visible%1Average%1Price"] };
+      return { ...configWithCompare, studies: ["STD;Visible%1Average%1Price"] };
   }
-}, [symbol, interval, theme]);
+}, [interval, theme]);
+
+  /**
+   * Function to initialize or reinitialize the TradingView widget
+   */
+  const initializeWidget = useCallback(() => {
+    // Check if the TradingView object is available
+    if (window.TradingView && containerRef.current) {
+      try {
+        // Create a new TradingView widget with the current configuration
+        new window.TradingView.widget(createWidgetConfig(chartType, currentSymbol));
+        // Set loading to false as the widget has been initialized
+        setLoading(false);
+      } catch (err) {
+        // If there's an error, set the error state and stop loading
+        setError("Failed to initialize TradingView widget");
+        setLoading(false);
+      }
+    }
+  }, [chartType, currentSymbol, createWidgetConfig]);
 
   /**
    * Function to handle chart type change
@@ -149,41 +196,28 @@ const createWidgetConfig = useCallback((type: ChartType) => {
     // Clean up the existing widget
     cleanupWidget();
     // Reinitialize the widget with the new chart type
-    if (containerRef.current) {
-      new window.TradingView.widget(createWidgetConfig(type));
-    }
-  }, [cleanupWidget, createWidgetConfig]);
+    initializeWidget();
+  }, [cleanupWidget, initializeWidget]);
 
   /**
-   * Effect to load and initialize the TradingView widget
+   * Effect to load the TradingView library and initialize the widget
    */
   useEffect(() => {
-    // Create a new script element
+    // Create a new script element for the TradingView library
     const script = document.createElement('script');
     script.src = 'https://s3.tradingview.com/tv.js';
     script.async = true;
 
-    // Define the onload handler for the script
-    script.onload = () => {
-      if (containerRef.current) {
-        try {
-          // Initialize the TradingView widget
-          new window.TradingView.widget(createWidgetConfig(chartType));
-          setLoading(false);
-        } catch (err) {
-          setError("Failed to initialize TradingView widget");
-          setLoading(false);
-        }
-      }
-    };
+    // Define what happens when the script loads successfully
+    script.onload = initializeWidget;
 
-    // Define the onerror handler for the script
+    // Define what happens if the script fails to load
     script.onerror = () => {
       setError("Failed to load TradingView library");
       setLoading(false);
     };
 
-    // Append the script to the document head
+    // Add the script to the document head
     document.head.appendChild(script);
 
     // Cleanup function to remove the script and widget when component unmounts
@@ -191,7 +225,22 @@ const createWidgetConfig = useCallback((type: ChartType) => {
       cleanupWidget();
       document.head.removeChild(script);
     };
-  }, [chartType, cleanupWidget, createWidgetConfig]);
+  }, [initializeWidget, cleanupWidget]);
+
+  /**
+   * Effect to handle symbol changes
+   */
+  useEffect(() => {
+    // Check if the symbol has changed
+    if (symbol !== currentSymbol) {
+      // Update the current symbol state
+      setCurrentSymbol(symbol);
+      // Clean up the existing widget
+      cleanupWidget();
+      // Reinitialize the widget with the new symbol
+      initializeWidget();
+    }
+  }, [symbol, currentSymbol, cleanupWidget, initializeWidget]);
 
   /**
    * Effect to handle keyboard navigation
@@ -199,27 +248,29 @@ const createWidgetConfig = useCallback((type: ChartType) => {
   useEffect(() => {
     // Function to handle keydown events
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Get an array of all chart types
       const chartTypes = Object.values(ChartType);
+      // Find the index of the current chart type
       const currentIndex = chartTypes.indexOf(chartType);
       if (event.key === 'ArrowLeft') {
-        // Move to the previous chart type
+        // Move to the previous chart type (wrap around if at the start)
         const newIndex = (currentIndex - 1 + chartTypes.length) % chartTypes.length;
         handleChartTypeChange(chartTypes[newIndex]);
       } else if (event.key === 'ArrowRight') {
-        // Move to the next chart type
+        // Move to the next chart type (wrap around if at the end)
         const newIndex = (currentIndex + 1) % chartTypes.length;
         handleChartTypeChange(chartTypes[newIndex]);
       }
     };
 
-    // Add the event listener
+    // Add the event listener for keydown events
     window.addEventListener('keydown', handleKeyDown);
 
-    // Remove the event listener on cleanup
+    // Remove the event listener when the component unmounts
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [chartType, handleChartTypeChange]);
 
-  // Render error message if there's an error
+  // If there's an error, render an error message
   if (error) {
     return <div>Error: {error}</div>;
   }
