@@ -1,5 +1,3 @@
----
-
 # TypeScript Amplifier: AWS Amplify Gen 2 Starter Template
 
 This repository provides a starter template for AWS Amplify Gen 2 development with TypeScript and React. It includes a bash script (`initialize.bash`) that automates the setup of the necessary tools and configuration for AWS Amplify on a new environment.
@@ -70,9 +68,13 @@ bash transfer-aws-configuration.bash
 
 Clone this repository to your local machine or remote environment:
 
+Note: Running `ssh-keygen` may not be required if you've already set up credentials with GitHub. Otherwise, copy the contents of `/home/ubuntu/.ssh/id_ed25519.pub` to the repository's "Deploy keys" (in "Settings"). Make sure "Allow write access" is checked if a need to update the repository is forseen.
+
 ```bash
-git clone https://github.com/incrementalcapital/advancedcharts.git
-cd typescript-amplifier
+ssh-keygen
+cat /home/ubuntu/.ssh/id_ed25519.pub
+git clone git@github.com:incrementalcapital/advancedcharts.git
+cd advancedcharts
 ```
 
 ### 3. Run the Initialization Script
@@ -176,7 +178,7 @@ If you need to set up your existing TypeScript/React Amplify project on a new EC
 3. Clone or copy your project to your local machine or remote environment:
    ```bash
    git clone git@github.com:incrementalcapital/advancedcharts.git
-   cd typescript-amplifier
+   cd advancedcharts
    ```
 4. Run the reinitialization script:
    ```
@@ -203,5 +205,3 @@ This project is licensed under the GNU General Public License (GPL) v3.0. See th
 ### Why GPL v3?
 
 The GPL v3 license enforces strong copyleft requirements and ensures that all derivative works of this project remain open source. This license also provides additional protections against patent claims, which aligns with the goal to keep contributions and derivatives freely available and to safeguard the project's integrity and freedom.
-
----
