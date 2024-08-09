@@ -196,10 +196,6 @@ cleanup_cloudformation_stacks() {
 }
 
 initialize_amplify_project() {
-    log "Navigating to project directory..."
-    mkdir -p "$project_name"
-    cd "$project_name" || { log_error "Failed to navigate to project directory"; exit 1; }
-
     log "Checking for existing Amplify project..."
     if [ -d "amplify" ]; then
         log "Existing Amplify project found."
@@ -214,7 +210,10 @@ initialize_amplify_project() {
                 log "Reinitializing Amplify project from scratch..."
                 cleanup_cloudformation_stacks "$AWS_AMPLIFY_APP_ID" "$AWS_BRANCH"
                 rm -rf amplify
-                amplify init --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" || { log_error "Amplify initialization failed"; exit 1; }
+                amplify init --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" \
+                             --frontend javascript \
+                             --javascript react \
+                             --yes || { log_error "Amplify initialization failed"; exit 1; }
                 ;;
             *)
                 log "Operation cancelled by user."
@@ -223,7 +222,10 @@ initialize_amplify_project() {
         esac
     else
         log "No existing Amplify project found. Initializing new project..."
-        amplify init --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" || { log_error "Amplify initialization failed"; exit 1; }
+        amplify init --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" \
+                     --frontend javascript \
+                     --javascript react \
+                     --yes || { log_error "Amplify initialization failed"; exit 1; }
     fi
 }
 
@@ -348,6 +350,13 @@ main() {
 
     # Initialize or reinitialize Amplify project
     initialize_amplify_project
+
+    # Check if Amplify created a nested directory
+    if [ -d "$project_name" ] && [ -d "$project_name/amplify" ]; then
+        log "Detected nested project directory. Adjusting structure..."
+        mv "$project_name"/* "$project_name"/.* .
+        rmdir "$project_name"
+    fi
 
     # Install and validate project dependencies
     install_and_validate_dependencies
