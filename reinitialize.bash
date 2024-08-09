@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # TypeScript Amplifier: AWS Amplify Gen 2 Project Setup Script
-# Version: 1.2
+# Version: 1.3
 # Author: Incremental Capitalist
 # Date: Friday, August 9th, 2024
 #
 # This script automates the setup process for an existing AWS Amplify Gen 2 project with React and TypeScript.
-# It handles system updates, installation of necessary tools, and "re-initialization" of a existing Amplify project.
+# It handles system updates, installation of necessary tools, and "re-initialization" of an existing Amplify project.
 #
 # Prerequisites:
 # - An AWS account with sufficient permissions to create and manage Amplify projects
@@ -108,7 +108,7 @@ install_node_and_nvm() {
         # Check if Node.js is installed, if not install it
         if ! command -v node &> /dev/null; then
             log "Installing Node.js using NVM..."
-    nvm install node || { log_error "Node.js installation failed"; exit 1; }
+            nvm install node || { log_error "Node.js installation failed"; exit 1; }
             nvm use node
         else
             log "Node.js is already installed."
@@ -137,29 +137,18 @@ EOF
 
 # Function to initialize or reinitialize Amplify project
 initialize_amplify_project() {
+    log "Navigating to project directory..."
+    mkdir -p "$project_name"
+    cd "$project_name" || { log_error "Failed to navigate to project directory"; exit 1; }
+
     log "Checking for existing Amplify project..."
     if [ -d "amplify" ]; then
         log "Existing Amplify project found. Reinitializing..."
-        amplify init --app $AWS_AMPLIFY_APP_ID || { log_error "Amplify reinitialization failed"; exit 1; }
+        amplify init --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" || { log_error "Amplify reinitialization failed"; exit 1; }
     else
         log "No existing Amplify project found. Initializing new project..."
-        amplify init --app $AWS_AMPLIFY_APP_ID || { log_error "Amplify initialization failed"; exit 1; }
+        amplify init --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" || { log_error "Amplify initialization failed"; exit 1; }
     fi
-}
-
-# Function to initialize Amplify in the React app
-initialize_amplify() {
-    log "Initializing Amplify in the React app..."
-    
-    # Initialize Amplify
-    amplify init --appId "$AWS_AMPLIFY_APP_ID" --envName "$AWS_BRANCH" || { log_error "Amplify init failed"; exit 1; }
-    
-    # Add Amplify configuration to index.tsx
-    sed -i '1iimport { Amplify } from '"'"'aws-amplify'"'"';' src/index.tsx
-    sed -i '2iimport awsExports from '"'"'./aws-exports'"'"';' src/index.tsx
-    sed -i '3iAmplify.configure(awsExports);' src/index.tsx
-    
-    log "Amplify initialized successfully in the React app."
 }
 
 # Function to install and validate project dependencies
@@ -262,35 +251,38 @@ main() {
     check_command aws
     check_command amplify
 
-    # Initialize or reinitialize Amplify project
-    initialize_amplify_project
-
-    # Install and validate project dependencies
-    install_and_validate_dependencies
-
     # Configure AWS CLI
     configure_aws_cli
 
     # Configure Amplify CLI
     configure_amplify_cli
 
+    # Navigate to project directory
+    log "Navigating to project directory..."
+    mkdir -p "$project_name"
+    cd "$project_name" || { log_error "Failed to navigate to project directory"; exit 1; }
+
+    # Initialize or reinitialize Amplify project
+    initialize_amplify_project
+
+    # Install and validate project dependencies
+    install_and_validate_dependencies
+
     # Configure Amplify in the main React file
     configure_amplify_in_react || { log_error "Failed to configure Amplify in React file"; exit 1; }
 
     log "Setup completed successfully!"
-    log "TypeScript Amplifier setup completed successfully!"    log "Setup completed successfully!"
+    log "Your AWS Amplify Gen 2 project with React and TypeScript is now ready."
     log "To ensure all changes take effect, please do one of the following:"
     log "1. Log out and log back in, or"
     log "2. Run the following command: source ~/.bashrc"
-    log "After that, you can run 'npm start' to start the development server."
-    log "If you encounter any issues, try serving the built version with: npx serve -s build"
-    log "Your AWS Amplify Gen 2 project with React and TypeScript is now ready."
     log "Next steps:"
     log "1. Review the project structure and configurations in the 'amplify' directory."
     log "2. Add your custom components and logic to the React app."
     log "3. Use 'amplify add' commands to add new features (e.g., 'amplify add api' for GraphQL API)."
     log "4. Deploy your app using 'amplify push' when ready."
     log "5. Start the development server with 'npm start' to see your app in action."
+    log "If you encounter any issues, try serving the built version with: npx serve -s build"
     log "For more information, visit the Amplify documentation: https://docs.amplify.aws/"
 }
 
