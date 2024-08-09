@@ -6,6 +6,9 @@
 # Annoying Mac OS stuff
 .DS_Store
 
+# Annoying VIM stuff
+*.swp
+
 # User-specific files
 *.rsuser
 *.suo
