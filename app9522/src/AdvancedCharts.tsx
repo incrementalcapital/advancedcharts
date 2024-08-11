@@ -1,9 +1,9 @@
 /**
  * @fileoverview This file contains the AdvancedCharts component, which renders a TradingView chart
- * with a comparison to the short volume data for the given symbol.
+ * with a comparison to the short volume data for the given symbol on a new scale, using price mode.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 /**
  * Props interface for the AdvancedCharts component.
@@ -19,13 +19,15 @@ interface AdvancedChartsProps {
 }
 
 /**
- * AdvancedCharts component that renders a TradingView chart with a comparison line.
+ * AdvancedCharts component that renders a TradingView chart with a comparison line on a new scale.
  * @param {AdvancedChartsProps} props - The props for the component
  * @returns {JSX.Element} An iframe containing the TradingView chart
  */
 const AdvancedCharts: React.FC<AdvancedChartsProps> = ({ symbol, width, height }) => {
   // Create a ref to hold the iframe element
   const containerRef = useRef<HTMLIFrameElement>(null);
+  // State to hold any error messages
+  const [error, setError] = useState<string | null>(null);
 
   // Use an effect to set up the TradingView widget when the component mounts or props change
   useEffect(() => {
@@ -40,7 +42,7 @@ const AdvancedCharts: React.FC<AdvancedChartsProps> = ({ symbol, width, height }
       // Create the JavaScript code that will run inside the iframe
       const script = `
         // Create a new TradingView widget
-        var widget = new TradingView.widget({
+        new TradingView.widget({
           symbol: "${symbol}",  // The main symbol to display
           interval: "D",        // Daily interval
           width: ${typeof width === 'number' ? width : `"${width}"`},  // Set the width
@@ -53,22 +55,57 @@ const AdvancedCharts: React.FC<AdvancedChartsProps> = ({ symbol, width, height }
           allow_symbol_change: true, // Allow changing the symbol
           save_image: false,         // Disable saving image feature
           container_id: "tradingview_widget",  // ID of the container div
+          studies: [
+            { 
+              id: "Compare@tv-basicstudies", 
+              inputs: { 
+                symbol: "${compareSymbol}",
+                source: "close"
+              },
+              options: {
+                "priceScale": "new-left",
+                "scaleMargins": {
+                  "top": 0.3,
+                  "bottom": 0.3
+                }
+              }
+            }
+          ],
+          overrides: {
+            "scalesProperties.backgroundColor": "#ffffff",
+            "scalesProperties.lineColor": "#F0F3FA",
+            "scalesProperties.textColor": "#131722",
+            "scalesProperties.scaleSeriesOnly": false,
+            "mainSeriesProperties.priceAxisProperties.autoScale": true,
+            "mainSeriesProperties.priceAxisProperties.percentage": false,
+            "mainSeriesProperties.priceAxisProperties.log": false,
+            "compareToMainSeriesSource": "close",
+            "mainSeriesSymbolAllowsComparison": true,
+            "comparisons.0.color": "#FF0000",
+            "comparisons.0.width": 2,
+            "comparisons.0.style": 0,  // 0 for solid line
+            "comparisons.0.isVisible": true,
+            "comparisons.0.showInDataWindow": true,
+            "comparisons.0.showInLegend": true,
+            "comparisons.0.showInSymbolList": true,
+            "comparisons.0.comparisonMode": "price",  // Use "price" for absolute values
+          },
+          customFeed: {
+            subscribeRealtime(callback) {
+              console.log('Subscription to realtime updates is not available.');
+              return function() {};
+            },
+            unsubscribeRealtime(subscriberId) {
+              console.log('Unsubscribe from realtime updates is not available.');
+            }
+          }
         });
 
-        // When the chart is ready, add the comparison line
-        widget.onChartReady(function() {
-          var chart = widget.chart();  // Get the chart object
-          var mainSeries = chart.symbol();  // Get the main symbol series
-          
-          // Add a new line series for comparison
-          chart.addLineSeries({
-            symbol: "${compareSymbol}",  // The comparison symbol (short volume)
-            chartField: "close",         // Use the closing price for comparison
-            compareToSymbol: mainSeries, // Compare to the main symbol
-            compareToChartField: "close",// Compare closing prices
-            lineColor: "#FF0000",        // Set the line color to red
-            lineWidth: 2,                // Set the line width
-          });
+        // Error handling for WebSocket connections
+        window.addEventListener('error', function(event) {
+          if (event.message.includes('WebSocket connection')) {
+            console.log('WebSocket connection failed. This may affect real-time data updates.');
+          }
         });
       `;
 
@@ -95,11 +132,14 @@ const AdvancedCharts: React.FC<AdvancedChartsProps> = ({ symbol, width, height }
 
   // Render an iframe that will contain the TradingView chart
   return (
-    <iframe
-      ref={containerRef}  // Attach the ref to the iframe
-      style={{ width, height, border: 'none' }}  // Set the iframe dimensions and remove border
-      title="TradingView Advanced Chart"  // Set a title for accessibility
-    />
+    <>
+      {error && <div style={{ color: 'red' }}>{error}</div>}
+      <iframe
+        ref={containerRef}  // Attach the ref to the iframe
+        style={{ width, height, border: 'none' }}  // Set the iframe dimensions and remove border
+        title="TradingView Advanced Chart"  // Set a title for accessibility
+      />
+    </>
   );
 };
 
