@@ -1,6 +1,6 @@
 /**
  * @fileoverview This file contains the AdvancedCharts component, which renders a TradingView chart
- * with a comparison to the short volume data for the given symbol on a new scale, using price mode.
+ * with a comparison to the short volume data for the given symbol on a new left scale.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -19,13 +19,14 @@ interface AdvancedChartsProps {
 }
 
 /**
- * AdvancedCharts component that renders a TradingView chart with a comparison line on a new scale.
+ * AdvancedCharts component that renders a TradingView chart with a comparison line on a new left scale.
  * @param {AdvancedChartsProps} props - The props for the component
  * @returns {JSX.Element} An iframe containing the TradingView chart
  */
 const AdvancedCharts: React.FC<AdvancedChartsProps> = ({ symbol, width, height }) => {
   // Create a ref to hold the iframe element
   const containerRef = useRef<HTMLIFrameElement>(null);
+  
   // State to hold any error messages
   const [error, setError] = useState<string | null>(null);
 
@@ -59,36 +60,38 @@ const AdvancedCharts: React.FC<AdvancedChartsProps> = ({ symbol, width, height }
             { 
               id: "Compare@tv-basicstudies", 
               inputs: { 
-                symbol: "${compareSymbol}",
-                source: "close"
+                symbol: "${compareSymbol}"
               },
               options: {
                 "priceScale": "new-left",
+                "priceScaleId": "compare_left",
                 "scaleMargins": {
-                  "top": 0.3,
-                  "bottom": 0.3
-                }
+                  "top": 0.2,
+                  "bottom": 0.2
+                },
+                "disableUnmerge": false,
+                "compareToMain": false
               }
             }
           ],
           overrides: {
+            "scalesProperties.showLeftScale": true,
+            "scalesProperties.showRightScale": true,
             "scalesProperties.backgroundColor": "#ffffff",
             "scalesProperties.lineColor": "#F0F3FA",
             "scalesProperties.textColor": "#131722",
-            "scalesProperties.scaleSeriesOnly": false,
             "mainSeriesProperties.priceAxisProperties.autoScale": true,
             "mainSeriesProperties.priceAxisProperties.percentage": false,
             "mainSeriesProperties.priceAxisProperties.log": false,
             "compareToMainSeriesSource": "close",
-            "mainSeriesSymbolAllowsComparison": true,
-            "comparisons.0.color": "#FF0000",
-            "comparisons.0.width": 2,
-            "comparisons.0.style": 0,  // 0 for solid line
-            "comparisons.0.isVisible": true,
-            "comparisons.0.showInDataWindow": true,
-            "comparisons.0.showInLegend": true,
-            "comparisons.0.showInSymbolList": true,
-            "comparisons.0.comparisonMode": "price",  // Use "price" for absolute values
+            "compareToMainSeriesUseChartScale": false,
+            "Compare@tv-basicstudies.style": 2,
+            "Compare@tv-basicstudies.linewidth": 2,
+            "Compare@tv-basicstudies.color": "#FF0000",
+            "Compare@tv-basicstudies.useCommonScale": false,
+            "Compare@tv-basicstudies.showInDataWindow": true,
+            "Compare@tv-basicstudies.visible": true,
+            "Compare@tv-basicstudies.showPriceTooltipFor": true
           },
           customFeed: {
             subscribeRealtime(callback) {
@@ -133,7 +136,10 @@ const AdvancedCharts: React.FC<AdvancedChartsProps> = ({ symbol, width, height }
   // Render an iframe that will contain the TradingView chart
   return (
     <>
+      {/* Display any errors if they occur */}
       {error && <div style={{ color: 'red' }}>{error}</div>}
+      
+      {/* The iframe that will contain the TradingView chart */}
       <iframe
         ref={containerRef}  // Attach the ref to the iframe
         style={{ width, height, border: 'none' }}  // Set the iframe dimensions and remove border
