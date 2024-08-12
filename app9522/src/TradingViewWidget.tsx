@@ -1,6 +1,7 @@
 /**
  * @file TradingViewWidget.tsx
  * @description A React component that renders a TradingView Advanced Chart widget with a menu for different chart types.
+ * This component allows users to view various technical indicators and compare multiple symbols on a single chart.
  */
 
 // Import necessary React hooks and types
@@ -8,7 +9,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 /**
  * Enum for different chart types
- * Each value represents a different chart configuration
+ * Each value represents a different chart configuration with specific indicators
  * @enum {string}
  */
 enum ChartType {
@@ -23,9 +24,9 @@ enum ChartType {
 
 /**
  * Props for the TradingViewWidget component
- * @typedef {Object} TradingViewWidgetProps
- * @property {string} [symbol='NASDAQ:NVDA'] - The default symbol to display on the chart
- * @property {string} [interval='D'] - The default time interval for the chart (e.g., 'D' for daily)
+ * @interface TradingViewWidgetProps
+ * @property {string} [symbol='NASDAQ:NVDA'] - The default symbol to display on the chart (e.g., 'NASDAQ:AAPL' for Apple Inc.)
+ * @property {string} [interval='D'] - The default time interval for the chart (e.g., 'D' for daily, 'W' for weekly, '60' for 60 minutes)
  * @property {('light'|'dark')} [theme='dark'] - The color theme of the widget
  */
 interface TradingViewWidgetProps {
@@ -37,16 +38,18 @@ interface TradingViewWidgetProps {
 /**
  * Interface for compare symbol configuration
  * Used to add additional symbols to the chart for comparison
+ * @interface CompareSymbol
  */
 interface CompareSymbol {
   symbol: string; // The symbol to compare (e.g., 'NASDAQ:AAPL')
   title?: string; // Optional title for the compare symbol
-  position: string; // Position on the chart (e.g., 'NewPriceScale')
+  position: string; // Position on the chart (e.g., 'NewPriceScale' for a new price scale, 'NewPane' for a new pane)
 }
 
 /**
  * Extends the global Window interface to include the TradingView property
  * This is necessary because TypeScript doesn't know about the TradingView object by default
+ * @global
  */
 declare global {
   interface Window {
@@ -57,6 +60,14 @@ declare global {
 /**
  * TradingViewWidget component
  * Renders a TradingView chart with configurable options and chart types
+ *
+ * @component
+ * @example
+ * // Basic usage
+ * <TradingViewWidget />
+ * 
+ * // Custom symbol and interval
+ * <TradingViewWidget symbol="NASDAQ:AAPL" interval="60" />
  *
  * @param {TradingViewWidgetProps} props - The props for the TradingViewWidget component
  * @returns {JSX.Element} The rendered TradingView widget with menu
