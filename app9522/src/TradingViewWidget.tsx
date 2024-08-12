@@ -30,8 +30,11 @@ enum ChartType {
  * @property {('light'|'dark')} [theme='dark'] - The color theme of the widget
  */
 interface TradingViewWidgetProps {
-  symbol?: string;
+  /** The initial stock symbol to display */
+  initialSymbol: string;
+  /** The time interval for the chart (e.g., 'D' for daily) */
   interval?: string;
+  /** The color theme of the widget */
   theme?: 'light' | 'dark';
 }
 
@@ -41,9 +44,12 @@ interface TradingViewWidgetProps {
  * @interface CompareSymbol
  */
 interface CompareSymbol {
-  symbol: string; // The symbol to compare (e.g., 'NASDAQ:AAPL')
-  title?: string; // Optional title for the compare symbol
-  position: string; // Position on the chart (e.g., 'NewPriceScale' for a new price scale, 'NewPane' for a new pane)
+  /** The symbol to compare */
+  symbol: string;
+  /** Optional title for the compare symbol */
+  title?: string;
+  /** Position on the chart (e.g., 'NewPriceScale' for a new price scale) */
+  position: string;
 }
 
 /**
@@ -73,39 +79,41 @@ declare global {
  * @returns {JSX.Element} The rendered TradingView widget with menu
  */
 const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
-  symbol = 'NASDAQ:NVDA', // Default symbol is NVIDIA
-  interval = 'D', // Default interval is daily
-  theme = 'dark' // Default theme is dark
+  initialSymbol,
+  interval = 'D',
+  theme = 'dark'
 }) => {
-  // Reference to the container div element where the TradingView widget will be rendered
+  // Reference to the container div for the TradingView widget
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // State to track loading status of the widget
+  
+  // State to manage loading status
   const [loading, setLoading] = useState(true);
-
-  // State to track error status if widget fails to load
+  
+  // State to manage error messages
   const [error, setError] = useState<string | null>(null);
-
-  // State to track the current chart type
+  
+  // State to manage the current chart type
   const [chartType, setChartType] = useState<ChartType>(ChartType.ShortInterest);
-
-  // State to track the current symbol being displayed
-  const [currentSymbol, setCurrentSymbol] = useState(symbol);
+  
+  // State to manage the current symbol being displayed
+  const [currentSymbol, setCurrentSymbol] = useState(initialSymbol);
+  
+  // State to manage the input field for changing symbols
+  const [inputSymbol, setInputSymbol] = useState('');
 
   /**
-   * Cleanup function to remove the TradingView widget
-   * This is used when reinitializing the widget or unmounting the component
+   * Cleanup function to remove the TradingView widget.
+   * @function
    */
   const cleanupWidget = useCallback(() => {
     if (containerRef.current) {
-      containerRef.current.innerHTML = ''; // Clear the container's content
+      containerRef.current.innerHTML = '';
     }
   }, []);
 
   /**
-   * Function to create TradingView widget configuration
-   * This function generates the configuration object based on the current chart type and symbol
-   *
+   * Creates the configuration object for the TradingView widget.
+   * @function
    * @param {ChartType} type - The chart type to configure
    * @param {string} sym - The current symbol for the chart
    * @returns {Object} The configuration object for TradingView widget
@@ -212,8 +220,8 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   }, [interval, theme]);
 
   /**
-   * Function to initialize or reinitialize the TradingView widget
-   * This is called when the component mounts or when the chart type or symbol changes
+   * Initializes or reinitializes the TradingView widget.
+   * @function
    */
   const initializeWidget = useCallback(() => {
     // Check if the TradingView object is available
@@ -230,9 +238,8 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   }, [chartType, currentSymbol, createWidgetConfig]);
 
   /**
-   * Function to handle chart type change
-   * This is called when the user selects a different chart type from the menu
-   *
+   * Handles changes in the chart type.
+   * @function
    * @param {ChartType} type - The new chart type
    */
   const handleChartTypeChange = useCallback((type: ChartType) => {
@@ -242,8 +249,19 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   }, [cleanupWidget, initializeWidget]);
 
   /**
-   * Effect to load the TradingView library and initialize the widget
-   * This runs once when the component mounts
+   * Handles changes in the symbol.
+   * @function
+   * @param {string} newSymbol - The new symbol to display
+   */
+  const handleSymbolChange = (newSymbol: string) => {
+    setCurrentSymbol(newSymbol);
+    cleanupWidget();
+    initializeWidget();
+  };
+
+  /**
+   * Effect to load the TradingView library and initialize the widget.
+   * @effect
    */
   useEffect(() => {
     // Create a new script element for the TradingView library
@@ -269,44 +287,8 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   }, [initializeWidget, cleanupWidget]);
 
   /**
-   * Effect to handle symbol changes
-   * This effect runs whenever the 'symbol' prop changes
-   */
-  useEffect(() => {
-    if (symbol !== currentSymbol) {
-      setCurrentSymbol(symbol); // Update the current symbol state
-      cleanupWidget(); // Clean up the existing widget
-      initializeWidget(); // Initialize the new widget with the new symbol
-    }
-  }, [symbol, currentSymbol, cleanupWidget, initializeWidget]);
-
-  /**
-   * Effect to periodically check the current symbol and update the configuration
-   */
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (window.TradingView && containerRef.current) {
-        const widgets = window.TradingView.widgets;
-        if (widgets && widgets.length > 0) {
-          const widget = widgets[0];
-          if (widget && widget.chart().symbol() !== currentSymbol) {
-            setCurrentSymbol(widget.chart().symbol());
-            cleanupWidget();
-    // Initialize the new widget with current symbol and chart type
-    // This will update the main chart and the "_SHORT_VOLUME" chart in the "NewPane"
-            initializeWidget();
-          }
-        }
-      }
-    }, 1000); // Check every second
-
-    // Cleanup function to clear the interval when component unmounts
-    return () => clearInterval(intervalId);
-  }, [currentSymbol, cleanupWidget, initializeWidget]);
-
-  /**
-   * Effect to handle keyboard navigation
-   * This allows users to switch between chart types using left and right arrow keys
+   * Effect to handle keyboard navigation for chart types.
+   * @effect
    */
   useEffect(() => {
     // Function to handle keydown events
@@ -341,21 +323,40 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   // Render the TradingView widget with menu
   return (
     <div className="flex flex-col h-full">
-      {/* Menu for chart type selection */}
-      <div className="flex justify-center space-x-2 p-2 bg-gray-800">
-        {Object.values(ChartType).map((type) => (
+      {/* Top bar with symbol input and chart type buttons */}
+      <div className="flex justify-between items-center space-x-2 p-2 bg-gray-800">
+        {/* Symbol input field and change button */}
+        <div className="flex items-center">
+          <input
+            type="text"
+            value={inputSymbol}
+            onChange={(e) => setInputSymbol(e.target.value)}
+            placeholder="Enter symbol..."
+            className="px-2 py-1 rounded mr-2 text-black"
+          />
           <button
-            key={type}
-            onClick={() => handleChartTypeChange(type)}
-            className={`px-4 py-2 rounded ${
-              chartType === type
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-600 text-gray-200 hover:bg-gray-500'
-            }`}
+            onClick={() => handleSymbolChange(inputSymbol)}
+            className="px-2 py-1 bg-blue-500 text-white rounded"
           >
-            {type}
+            Change Symbol
           </button>
-        ))}
+        </div>
+        {/* Chart type selection buttons */}
+        <div className="flex space-x-2">
+          {Object.values(ChartType).map((type) => (
+            <button
+              key={type}
+              onClick={() => handleChartTypeChange(type)}
+              className={`px-4 py-2 rounded ${
+                chartType === type
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-600 text-gray-200 hover:bg-gray-500'
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
       </div>
       {/* Container for the TradingView widget */}
       <div className="flex-grow relative">

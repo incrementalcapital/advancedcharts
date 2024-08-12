@@ -1,31 +1,68 @@
 /**
- * @file App.tsx - The root component of our React application, rendering the TradingView widget.
+ * @file App.tsx
+ * @description The main application component that renders the TradingViewWidget.
  */
 
-// Import necessary modules
-import React from 'react'; // The core of React for building user interfaces
-import TradingViewWidget from './TradingViewWidget'; // Our custom component to embed the TradingView chart
-import './App.css'; // Import styles for the App component
+import React, { useState, useEffect } from 'react'; // Import necessary hooks from React
+import TradingViewWidget from './TradingViewWidget'; // Import our custom TradingViewWidget component
+import './App.css'; // Import CSS styles for this component
 
 /**
- * The main functional component of our application.
- *
- * @returns {JSX.Element} The rendered JSX structure representing the application's UI.
+ * The main App component.
+ * @function
+ * @returns {JSX.Element} The rendered App component
  */
-function App() {
+function App(): JSX.Element {
+  // State to hold the initial symbol entered by the user
+  const [initialSymbol, setInitialSymbol] = useState<string | null>(null);
+
+  /**
+   * Prompts the user to enter a ticker symbol.
+   * @function
+   */
+  const promptForSymbol = (): void => {
+    // Use the browser's built-in prompt to get user input
+    const input = prompt("Enter a ticker symbol (e.g., NASDAQ:AAPL):");
+    // If the user entered a symbol (didn't cancel), update the state
+    if (input) {
+      setInitialSymbol(input);
+    }
+  };
+
+  /**
+   * Effect hook to prompt for a symbol when the component mounts.
+   * @effect
+   */
+  useEffect(() => {
+    // If there's no initial symbol, prompt the user to enter one
+    if (!initialSymbol) {
+      promptForSymbol();
+    }
+  }, []); // Empty dependency array means this effect runs once on mount
+
   return (
-    // A div container to hold the TradingView widget, styled to occupy the entire viewport
+    // Main container div, set to full viewport height and width
     <div style={{ height: '100vh', width: '100%' }}>
-      {/*
-        Render the TradingViewWidget component with props to configure it:
-        - symbol: The financial instrument to display (e.g., NASDAQ:NVDA for NVIDIA stock)
-        - interval: The time interval for the chart's data (e.g., D for daily)
-        - theme: The visual theme of the chart (e.g., dark)
-      */}
-      <TradingViewWidget symbol="NASDAQ:NVDA" interval="D" theme="dark" /> 
+      {initialSymbol ? (
+        // If we have an initial symbol, render the TradingViewWidget
+        <TradingViewWidget 
+          initialSymbol={initialSymbol} // Pass the initial symbol to the widget
+          interval="D" // Set the default interval to daily
+          theme="dark" // Set the default theme to dark
+        />
+      ) : (
+        // If we don't have an initial symbol, show a button to enter one
+        <div className="flex items-center justify-center h-full">
+          <button 
+            onClick={promptForSymbol} // Call promptForSymbol when clicked
+            className="px-4 py-2 bg-blue-500 text-white rounded"
+          >
+            Enter Ticker Symbol
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-// Export the App component as the default export of this module
-export default App;
+export default App; // Export the App component as the default export
