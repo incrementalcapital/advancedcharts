@@ -6,6 +6,8 @@
 
 // Import necessary React hooks and types
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+// Import ChevronDown icon from Lucide React for custom dropdown styling
+import { ChevronDown } from 'lucide-react';
 
 /**
  * Enum for different chart types
@@ -25,7 +27,7 @@ enum ChartType {
 /**
  * Props for the TradingViewWidget component
  * @interface TradingViewWidgetProps
- * @property {string} [symbol='NASDAQ:NVDA'] - The default symbol to display on the chart (e.g., 'NASDAQ:AAPL' for Apple Inc.)
+ * @property {string} [initialSymbol='AMEX:SPY'] - The default symbol to display on the chart (e.g., 'NASDAQ:AAPL' for Apple Inc.)
  * @property {string} [interval='D'] - The default time interval for the chart (e.g., 'D' for daily, 'W' for weekly, '60' for 60 minutes)
  * @property {('light'|'dark')} [theme='dark'] - The color theme of the widget
  */
@@ -61,7 +63,7 @@ const WATCHLIST = ["INDEX:SPX", "NASDAQ:AMAT", "NASDAQ:ARM", "NASDAQ:QCOM", "NAS
  * <TradingViewWidget />
  * 
  * // Custom symbol and interval
- * <TradingViewWidget symbol="NASDAQ:AAPL" interval="60" />
+ * <TradingViewWidget initialSymbol="NASDAQ:AAPL" interval="60" />
  *
  * @param {TradingViewWidgetProps} props - The props for the TradingViewWidget component
  * @returns {JSX.Element} The rendered TradingView widget with menu
@@ -208,14 +210,14 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   const initializeWidget = useCallback(() => {
     // Check if the TradingView object is available
     if (window.TradingView && containerRef.current) {
-try {
-  // Create a new TradingView widget with the current configuration
-  new (window.TradingView.widget as any)(createWidgetConfig(chartType, currentSymbol));
-  setLoading(false); // Set loading to false as the widget has been initialized
-} catch (err) {
-  setError("Failed to initialize TradingView widget"); // Set error state if initialization fails
-  setLoading(false);
-}
+      try {
+        // Create a new TradingView widget with the current configuration
+        new (window.TradingView.widget as any)(createWidgetConfig(chartType, currentSymbol));
+        setLoading(false); // Set loading to false as the widget has been initialized
+      } catch (err) {
+        setError("Failed to initialize TradingView widget"); // Set error state if initialization fails
+        setLoading(false);
+      }
     }
   }, [chartType, currentSymbol, createWidgetConfig]);
 
@@ -299,6 +301,8 @@ try {
 
   /**
    * Handles form submission for changing the symbol
+   * @function
+   * @param {React.FormEvent<HTMLFormElement>} e - The form submission event
    */
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); // Prevent the default form submission behavior
@@ -313,48 +317,47 @@ try {
     return <div>Error: {error}</div>;
   }
 
-  // Render the TradingView widget with controls
+  // Render the TradingView widget with improved controls
   return (
-    <div className="flex flex-col h-full">
-      {/* Controls section */}
-      <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-2 p-2 bg-gray-800">
-        {/* Form for manual symbol input */}
+    <div className="flex flex-col h-full bg-gray-900 text-white">
+      {/* Controls section with improved styling */}
+      <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-2 p-4 bg-gray-800">
+        {/* Form for manual symbol input with consistent styling */}
         <form onSubmit={handleSubmit} className="w-full sm:w-auto">
           <input
             type="text"
             value={inputSymbol}
             onChange={(e) => setInputSymbol(e.target.value)}
             placeholder="Enter symbol..."
-            className="w-full sm:w-64 px-2 py-1 rounded text-black"
+            className="w-full sm:w-64 px-4 py-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </form>
-        {/* Dropdown for watchlist */}
-        <div className="relative w-full sm:w-auto">
+        {/* Dropdown for watchlist with custom styling */}
+        <div className="relative w-full sm:w-64">
           <select
             onChange={(e) => handleSymbolChange(e.target.value)}
-            className="appearance-none w-full sm:w-64 bg-white border border-gray-300 text-gray-700 py-2 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
+            className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-2 px-4 pr-8 rounded-md leading-tight focus:outline-none focus:bg-gray-600 focus:border-blue-500 transition-colors"
           >
             <option value="">Select from watchlist</option>
             {WATCHLIST.map((symbol) => (
               <option key={symbol} value={symbol}>{symbol}</option>
             ))}
           </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-            </svg>
+          {/* Custom dropdown icon */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+            <ChevronDown size={20} />
           </div>
         </div>
-        {/* Chart type selection buttons */}
+        {/* Chart type selection buttons with improved styling */}
         <div className="flex flex-wrap justify-center sm:justify-end space-x-2">
           {Object.values(ChartType).map((type) => (
             <button
               key={type}
               onClick={() => handleChartTypeChange(type)}
-              className={`px-2 py-1 rounded text-xs ${
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 chartType === type
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-600 text-gray-200 hover:bg-gray-500'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
               }`}
             >
               {type}
@@ -364,9 +367,9 @@ try {
       </div>
       {/* Container for the TradingView widget */}
       <div className="flex-grow relative">
-        {/* Loading indicator */}
+        {/* Loading indicator with improved styling */}
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-10">
             <div className="text-white">Loading TradingView widget...</div>
           </div>
         )}
