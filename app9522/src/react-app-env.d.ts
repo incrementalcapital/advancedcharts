@@ -11,7 +11,7 @@
  */
 interface Window {
     TradingView: {
-      widget: (config: any) => any;
+      widget: new (config: any) => any;
     }
   }
   

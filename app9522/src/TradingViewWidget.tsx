@@ -47,17 +47,6 @@ interface CompareSymbol {
 }
 
 /**
- * Extend the global Window interface to include the TradingView property
- * This is necessary because TypeScript doesn't know about the TradingView object by default
- * @global
- */
-declare global {
-  interface Window {
-    TradingView: any; // 'any' is used because we don't have exact typings for the TradingView object
-  }
-}
-
-/**
  * Predefined watchlist of ticker symbols
  */
 const WATCHLIST = ["INDEX:SPX", "NASDAQ:AMAT", "NASDAQ:ARM", "NASDAQ:QCOM", "NASDAQ:NVDA", "NYSE:TSM"];
@@ -219,14 +208,14 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   const initializeWidget = useCallback(() => {
     // Check if the TradingView object is available
     if (window.TradingView && containerRef.current) {
-      try {
-        // Create a new TradingView widget with the current configuration
-        new window.TradingView.widget(createWidgetConfig(chartType, currentSymbol));
-        setLoading(false); // Set loading to false as the widget has been initialized
-      } catch (err) {
-        setError("Failed to initialize TradingView widget"); // Set error state if initialization fails
-        setLoading(false);
-      }
+try {
+  // Create a new TradingView widget with the current configuration
+  new (window.TradingView.widget as any)(createWidgetConfig(chartType, currentSymbol));
+  setLoading(false); // Set loading to false as the widget has been initialized
+} catch (err) {
+  setError("Failed to initialize TradingView widget"); // Set error state if initialization fails
+  setLoading(false);
+}
     }
   }, [chartType, currentSymbol, createWidgetConfig]);
 
