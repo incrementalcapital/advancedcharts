@@ -8,22 +8,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 // Import ChevronDown icon from Lucide React for custom dropdown styling
 import { ChevronDown } from 'lucide-react';
-
-/**
- * Enum for different chart types
- * Each value represents a different chart configuration with specific indicators
- * @enum {string}
- */
-enum ChartType {
-  ShortInterest = 'Short Interest', // Shows short volume data alongside the main chart
-  MACD = 'MACD', // Moving Average Convergence Divergence
-  RSI = 'RSI', // Relative Strength Index
-  AD = 'AD', // Accumulation/Distribution
-  LinearRegression = 'Linear Regression', // New chart type
-  OBV = 'OBV', // On-Balance Volume
-  ATR = 'ATR', // Average True Range
-  SlowStoch = 'Slow Stochastic' // Slow Stochastic Oscillator
-}
+import { ChartType } from './types'; // Import ChartType enum
+import { getChartConfig } from './chartConfigurations'; // Import the chart configuration function
 
 /**
  * Props for the TradingViewWidget component
@@ -33,26 +19,18 @@ enum ChartType {
  * @property {('light'|'dark')} [theme='dark'] - The color theme of the widget
  */
 interface TradingViewWidgetProps {
-  initialSymbol?: string; // The initial symbol to display on the chart
-  interval?: string; // The default time interval for the chart
-  theme?: 'light' | 'dark'; // The color theme of the widget
-}
-
-/**
- * Interface for compare symbol configuration
- * Used to add additional symbols to the chart for comparison
- * @interface CompareSymbol
- */
-interface CompareSymbol {
-  symbol: string; // The symbol to compare
-  title?: string; // Optional title for the compare symbol
-  position: string; // Position on the chart (e.g., 'NewPriceScale' for a new price scale)
+  /** The initial symbol to display on the chart (default: 'AMEX:SPY') */
+  initialSymbol?: string;
+  /** The default time interval for the chart (default: 'D' for daily) */
+  interval?: string;
+  /** The color theme of the widget (default: 'dark') */
+  theme?: 'light' | 'dark';
 }
 
 /**
  * Predefined watchlist of ticker symbols
  */
-const WATCHLIST = ["INDEX:SPX", "NASDAQ:AMAT", "NASDAQ:ARM", "NASDAQ:QCOM", "NASDAQ:NVDA", "NYSE:TSM"];
+const WATCHLIST = ["AMEX:SPY", "NASDAQ:AMAT", "NASDAQ:ARM", "NASDAQ:QCOM", "NASDAQ:NVDA", "NYSE:TSM"];
 
 /**
  * TradingViewWidget component
@@ -103,105 +81,75 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
     }
   }, []);
 
-  /**
-   * Creates the configuration object for the TradingView widget.
+/**
+ * Creates the configuration object for the TradingView widget.
    * @function
-   * @param {ChartType} type - The chart type to configure
-   * @param {string} sym - The current symbol for the chart
-   * @returns {Object} The configuration object for TradingView widget
-   */
-  const createWidgetConfig = useCallback((type: ChartType, sym: string) => {
-    // Extract the stock symbol without the exchange prefix
-    const stockSymbol = sym.split(':').pop() || sym;
+ * @param {ChartType} type - The chart type to configure
+ * @param {string} sym - The current symbol for the chart
+ * @returns {Object} The configuration object for TradingView widget
+ */
+const createWidgetConfig = useCallback((type: ChartType, sym: string) => {
+  // Get the chart configuration for the current type and symbol
+  const chartConfig = getChartConfig(type, sym);
 
-    // Define the base configuration for the TradingView widget
-    const baseConfig = {
-      autosize: true, // Make the widget responsive
-      symbol: sym, // Use the provided symbol
-      interval: interval, // Use the provided interval
-      timezone: "Etc/UTC", // Use UTC timezone
-      theme: theme, // Use the provided theme
-      style: "8", // Chart style (8 is 'Western' style)
-      locale: "en", // Use English locale
-      backgroundColor: "rgba(0, 0, 0, 1)", // Black background
-      gridColor: "rgba(0, 0, 0, 1)", // Black grid color
-      toolbar_bg: "rgba(0, 0, 0, 1)", // Black toolbar background
-      enable_publishing: false, // Disable publishing feature
-      withdateranges: true, // Show date range selector
-      hide_side_toolbar: false, // Show side toolbar
-      allow_symbol_change: true, // Allow changing the symbol
-      details: true, // Show details
-      hotlist: true, // Show hotlist
-      calendar: true, // Show calendar
-      show_popup_button: true, // Show popup button
-      popup_width: "1000", // Popup width
-      popup_height: "650", // Popup height
-      container_id: containerRef.current?.id, // ID of the container element
-    };
+  // Define the base configuration for the TradingView widget
+  const baseConfig = {
+    autosize: true,
+    symbol: sym,
+    interval: interval,
+    timezone: "Etc/UTC",
+    theme: theme,
+    style: "8",
+    locale: "en",
+    gridColor: "rgba(0, 0, 0, 0)",
+    enable_publishing: false,
+    withdateranges: true,
+    hide_side_toolbar: false,
+    allow_symbol_change: true,
+    details: true,
+    hotlist: true,
+    calendar: true,
+    show_popup_button: true,
+    popup_width: "1000",
+    popup_height: "650",
+    container_id: containerRef.current?.id,
+        
+    // Define the chart structure with two panes
+    charts: [
+      { height: 85 }, // Main chart pane takes 85% of the height
+      { height: 15 }, // Indicator pane takes 15% of the height
+    ],
 
-    // Define compare symbols and studies based on the chart type
-    let compareSymbols: CompareSymbol[] = [];
-    let studies: string[] = [];
-
-    // Configure compare symbols and studies based on the selected chart type
-    switch (type) {
-      case ChartType.ShortInterest:
-        compareSymbols = [{
-          symbol: `FINRA:${stockSymbol}_SHORT_VOLUME`,
-          title: "Short Volume",
-          position: "NewPane"
-        }];
-        studies = ["STD;Visible%1Average%1Price","MFI@tv-basicstudies"]; // Money Flow Index study
-        break;
-      case ChartType.MACD:
-        compareSymbols = [{
-          symbol: "CME_MINI:NQ1!", // Nasdaq 100 futures
-          position: "NewPriceScale"
-        }];
-        studies = ["MACD@tv-basicstudies"];
-        break;
-      case ChartType.RSI:
-        compareSymbols = [{
-          symbol: "CME_MINI:ES1!", // S&P 500 futures
-          position: "NewPriceScale"
-        }];
-        studies = ["RSI@tv-basicstudies"];
-        break;
-      case ChartType.OBV:
-        studies = ["OBV@tv-basicstudies"];
-        break;
-      case ChartType.AD:
-        studies = ["ACCD@tv-basicstudies"];
-        break;
-      case ChartType.LinearRegression:
-        studies = ["LinearRegression@tv-basicstudies"];
-        break;
-      case ChartType.ATR:
-        studies = ["ATR@tv-basicstudies"];
-        break;
-      case ChartType.SlowStoch:
-        studies = ["Stochastic@tv-basicstudies"];
-        break;
+    // Updated overrides for Heikin-Ashi candle colors and volume
+    overrides: {
+      "mainSeriesProperties.haStyle.upColor": "rgba(238, 130, 238, 0.05)", // Violet with 5% opacity for up Heikin-Ashi candles
+      "mainSeriesProperties.haStyle.downColor": "rgba(255, 255, 255, 0.05)", // White with 5% opacity for down Heikin-Ashi candles
+      "mainSeriesProperties.haStyle.drawWick": true,
+      "mainSeriesProperties.haStyle.drawBorder": true,
+      "mainSeriesProperties.haStyle.borderUpColor": "rgb(238, 130, 238)", // Solid violet border for up Heikin-Ashi candles
+      "mainSeriesProperties.haStyle.borderDownColor": "#FFFFFF", // Black border for down Heikin-Ashi candles
+      "mainSeriesProperties.haStyle.wickUpColor": "rgb(238, 130, 238)", // Solid violet wick for up Heikin-Ashi candles
+      "mainSeriesProperties.haStyle.wickDownColor": "#FFFFFF", // Black wick for down Heikin-Ashi candles
     }
+  };
 
+    // Combine the base configuration with the chart-specific configuration
     return {
       ...baseConfig,
-      compareSymbols,
-      studies,
+      ...chartConfig,
       studies_overrides: {
-        // Default overrides for studies (can be expanded for specific studies)
-        "volume.volume.color.0": "#00FFFF", // Cyan color for volume up
-        "volume.volume.color.1": "#0000FF", // Blue color for volume down
-        "volume.volume.transparency": 50, // 50% transparency for volume
-        "MFI@tv-basicstudies.plot.color": "#FF6D00", // Orange color for MFI
-        "MFI@tv-basicstudies.plot.linewidth": 2, // Line width for MFI
-        "Stochastic@tv-basicstudies.K.color": "#2962FF", // Blue for %K line
-        "Stochastic@tv-basicstudies.D.color": "#FF6D00", // Orange for %D line
-        "Stochastic@tv-basicstudies.smooth": true, // Smooth the Stochastic
-        "Stochastic@tv-basicstudies.k": 14, // %K period
-        "Stochastic@tv-basicstudies.d": 3, // %D period
-        "Stochastic@tv-basicstudies.upper_band": 80, // Upper band (overbought)
-        "Stochastic@tv-basicstudies.lower_band": 20, // Lower band (oversold)
+        "volume.volume.color.0": "rgba(211, 211, 211, 0.2)",
+        "volume.volume.color.1": "rgba(169, 169, 169, 0.1)",
+        "volume.volume.transparency": 50,
+        "MF@tv-basicstudies.plot.color": "#FF6D00",
+        "MF@tv-basicstudies.plot.linewidth": 2,
+        "Stochastic@tv-basicstudies.K.color": "#2962FF",
+        "Stochastic@tv-basicstudies.D.color": "#FF6D00",
+        "Stochastic@tv-basicstudies.smooth": true,
+        "Stochastic@tv-basicstudies.k": 14,
+        "Stochastic@tv-basicstudies.d": 3,
+        "Stochastic@tv-basicstudies.upper_band": 80,
+        "Stochastic@tv-basicstudies.lower_band": 20,
         "LinearRegression@tv-basicstudies.linewidth": 2,
         "LinearRegression@tv-basicstudies.upper_band.color": "#FF9900",
         "LinearRegression@tv-basicstudies.lower_band.color": "#FF9900",
@@ -209,7 +157,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
         "LinearRegression@tv-basicstudies.period": 100
       }
     };
-  }, [interval, theme]);
+}, [interval, theme]);
 
   /**
    * Initializes or reinitializes the TradingView widget.
@@ -328,9 +276,9 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   // Render the TradingView widget with improved controls
   return (
     <div className="flex flex-col h-full bg-gray-900 text-white">
-      {/* Controls section with improved styling */}
+      {/* Controls section */}
       <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-2 p-4 bg-gray-800">
-        {/* Form for manual symbol input with consistent styling */}
+        {/* Symbol input form */}
         <form onSubmit={handleSubmit} className="w-full sm:w-auto">
           <input
             type="text"
@@ -340,7 +288,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
             className="w-full sm:w-64 px-4 py-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </form>
-        {/* Dropdown for watchlist with custom styling */}
+        {/* Watchlist dropdown */}
         <div className="relative w-full sm:w-64">
           <select
             onChange={(e) => handleSymbolChange(e.target.value)}
@@ -356,21 +304,21 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
             <ChevronDown size={20} />
           </div>
         </div>
-        {/* Chart type selection buttons with improved styling */}
+        {/* Chart type selection buttons */}
         <div className="flex flex-wrap justify-center sm:justify-end space-x-2">
-          {Object.values(ChartType).map((type) => (
-            <button
-              key={type}
-              onClick={() => handleChartTypeChange(type)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                chartType === type
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
-              }`}
-            >
-              {type}
-            </button>
-          ))}
+        {Object.values(ChartType).map((type) => (
+  <button
+    key={type as string}
+    onClick={() => handleChartTypeChange(type as ChartType)}
+    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+      chartType === type
+        ? 'bg-blue-600 text-white'
+        : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+    }`}
+  >
+    {type as string}
+  </button>
+))}
         </div>
       </div>
       {/* Container for the TradingView widget */}
