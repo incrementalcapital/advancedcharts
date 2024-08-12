@@ -3,27 +3,29 @@
  * @description A React component that renders a TradingView Advanced Chart widget with a menu for different chart types.
  */
 
+// Import necessary React hooks and types
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 /**
  * Enum for different chart types
+ * Each value represents a different chart configuration
  * @enum {string}
  */
 enum ChartType {
-  ShortInterest = 'Short Interest', // New chart type replacing HeikinAshi
-  MACD = 'MACD',
-  RSI = 'RSI',
-  OBV = 'OBV',
-  AD = 'AD',
-  ATR = 'ATR',
-  SlowStoch = 'Slow Stochastic'
+  ShortInterest = 'Short Interest', // Shows short volume data alongside the main chart
+  MACD = 'MACD', // Moving Average Convergence Divergence
+  RSI = 'RSI', // Relative Strength Index
+  OBV = 'OBV', // On-Balance Volume
+  AD = 'AD', // Accumulation/Distribution
+  ATR = 'ATR', // Average True Range
+  SlowStoch = 'Slow Stochastic' // Slow Stochastic Oscillator
 }
 
 /**
  * Props for the TradingViewWidget component
  * @typedef {Object} TradingViewWidgetProps
  * @property {string} [symbol='NASDAQ:NVDA'] - The default symbol to display on the chart
- * @property {string} [interval='D'] - The default time interval for the chart
+ * @property {string} [interval='D'] - The default time interval for the chart (e.g., 'D' for daily)
  * @property {('light'|'dark')} [theme='dark'] - The color theme of the widget
  */
 interface TradingViewWidgetProps {
@@ -33,120 +35,131 @@ interface TradingViewWidgetProps {
 }
 
 /**
+ * Interface for compare symbol configuration
+ * Used to add additional symbols to the chart for comparison
+ */
+interface CompareSymbol {
+  symbol: string; // The symbol to compare (e.g., 'NASDAQ:AAPL')
+  title?: string; // Optional title for the compare symbol
+  position: string; // Position on the chart (e.g., 'NewPriceScale')
+}
+
+/**
  * Extends the global Window interface to include the TradingView property
+ * This is necessary because TypeScript doesn't know about the TradingView object by default
  */
 declare global {
   interface Window {
-    TradingView: any;
+    TradingView: any; // 'any' is used because we don't have exact typings for the TradingView object
   }
 }
 
 /**
  * TradingViewWidget component
+ * Renders a TradingView chart with configurable options and chart types
+ *
  * @param {TradingViewWidgetProps} props - The props for the TradingViewWidget component
  * @returns {JSX.Element} The rendered TradingView widget with menu
  */
 const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
-  symbol = 'NASDAQ:NVDA',
-  interval = 'D',
-  theme = 'dark'
+  symbol = 'NASDAQ:NVDA', // Default symbol is NVIDIA
+  interval = 'D', // Default interval is daily
+  theme = 'dark' // Default theme is dark
 }) => {
-  // Reference to the container div element
+  // Reference to the container div element where the TradingView widget will be rendered
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // State to track loading status
+  // State to track loading status of the widget
   const [loading, setLoading] = useState(true);
 
-  // State to track error status
+  // State to track error status if widget fails to load
   const [error, setError] = useState<string | null>(null);
 
   // State to track the current chart type
   const [chartType, setChartType] = useState<ChartType>(ChartType.ShortInterest);
 
-  // State to track the current symbol
+  // State to track the current symbol being displayed
   const [currentSymbol, setCurrentSymbol] = useState(symbol);
 
   /**
    * Cleanup function to remove the TradingView widget
+   * This is used when reinitializing the widget or unmounting the component
    */
   const cleanupWidget = useCallback(() => {
-    // Check if the container ref is available and has content
     if (containerRef.current) {
-      // Clear the contents of the container
-      containerRef.current.innerHTML = '';
+      containerRef.current.innerHTML = ''; // Clear the container's content
     }
   }, []);
 
   /**
    * Function to create TradingView widget configuration
+   * This function generates the configuration object based on the current chart type and symbol
+   *
    * @param {ChartType} type - The chart type to configure
    * @param {string} sym - The current symbol for the chart
    * @returns {Object} The configuration object for TradingView widget
    */
   const createWidgetConfig = useCallback((type: ChartType, sym: string) => {
     // Extract the stock symbol without the exchange prefix
-  // This line splits the symbol string at the colon and takes the last part
-  // If there's no colon, it will use the whole string
-  // The || 'NVDA' is a fallback in case the split operation fails
-    const stockSymbol = sym.split(':').pop() || 'NVDA';
+    const stockSymbol = sym.split(':').pop() || sym;
 
     // Define the base configuration for the TradingView widget
     const baseConfig = {
-      autosize: true,
-    symbol: sym,  // Use the provided symbol here
-      interval: interval,
-      timezone: "Etc/UTC",
-      theme: theme,
-      style: "8",
-      locale: "en",
-      backgroundColor: "rgba(0, 0, 0, 1)",
-      gridColor: "rgba(0, 0, 0, 1)",
-      toolbar_bg: "rgba(0, 0, 0, 1)",
-      enable_publishing: false,
-      withdateranges: true,
-      hide_side_toolbar: false,
-      allow_symbol_change: true,
-      watchlist: [
+      autosize: true, // Make the widget responsive
+      symbol: sym, // Use the provided symbol
+      interval: interval, // Use the provided interval
+      timezone: "Etc/UTC", // Use UTC timezone
+      theme: theme, // Use the provided theme
+      style: "8", // Chart style (8 is 'Western' style)
+      locale: "en", // Use English locale
+      backgroundColor: "rgba(0, 0, 0, 1)", // Black background
+      gridColor: "rgba(0, 0, 0, 1)", // Black grid color
+      toolbar_bg: "rgba(0, 0, 0, 1)", // Black toolbar background
+      enable_publishing: false, // Disable publishing feature
+      withdateranges: true, // Show date range selector
+      hide_side_toolbar: false, // Show side toolbar
+      allow_symbol_change: true, // Allow changing the symbol
+      watchlist: [ // Predefined watchlist
         "NASDAQ:AMAT",
         "NASDAQ:ARM",
         "NASDAQ:QCOM",
         "NASDAQ:NVDA",
         "NYSE:TSM"
       ],
-      details: true,
-      hotlist: true,
-      calendar: true,
-      show_popup_button: true,
-      popup_width: "1000",
-      popup_height: "650",
-      container_id: containerRef.current?.id,
+      details: true, // Show details
+      hotlist: true, // Show hotlist
+      calendar: true, // Show calendar
+      show_popup_button: true, // Show popup button
+      popup_width: "1000", // Popup width
+      popup_height: "650", // Popup height
+      container_id: containerRef.current?.id, // ID of the container element
     };
 
     // Define compare symbols and studies based on the chart type
-    let compareSymbols = [];
-    let studies = [];
+    let compareSymbols: CompareSymbol[] = [];
+    let studies: string[] = [];
 
+    // Configure compare symbols and studies based on the selected chart type
     switch (type) {
       case ChartType.ShortInterest:
-        // For Short Interest, we add the short volume as a compare symbol and MFI as a study
         compareSymbols = [{
-          "symbol": `FINRA:${stockSymbol}_SHORT_VOLUME`,
-          "title": "Short Volume",
-          "position": "NewPriceScale" // Changed from "NewPane" to "NewPriceScale"
+          symbol: `FINRA:${stockSymbol}_SHORT_VOLUME`,
+          title: "Short Volume",
+          position: "NewPane"
         }];
-        studies = ["STD;Visible%1Average%1Price", "MFI@tv-basicstudies"]; // Money Flow Index study
+        studies = ["STD;Visible%1Average%1Price","MFI@tv-basicstudies"]; // Money Flow Index study
         break;
       case ChartType.MACD:
         compareSymbols = [{
-          "symbol": "CME_MINI:NQ1!", // Nasdaq 100 futures
-          "position": "NewPriceScale"
+          symbol: "CME_MINI:NQ1!", // Nasdaq 100 futures
+          position: "NewPriceScale"
         }];
         studies = ["MACD@tv-basicstudies"];
         break;
       case ChartType.RSI:
         compareSymbols = [{
-          "symbol": "CME_MINI:ES1!", // S&P 500 futures
-          "position": "NewPriceScale"
+          symbol: "CME_MINI:ES1!", // S&P 500 futures
+          position: "NewPriceScale"
         }];
         studies = ["RSI@tv-basicstudies"];
         break;
@@ -171,24 +184,25 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
       studies,
       studies_overrides: {
         // Default overrides for studies (can be expanded for specific studies)
-        "volume.volume.color.0": "#00FFFF",
-        "volume.volume.color.1": "#0000FF",
-        "volume.volume.transparency": 50,
+        "volume.volume.color.0": "#00FFFF", // Cyan color for volume up
+        "volume.volume.color.1": "#0000FF", // Blue color for volume down
+        "volume.volume.transparency": 50, // 50% transparency for volume
         "MFI@tv-basicstudies.plot.color": "#FF6D00", // Orange color for MFI
-        "MFI@tv-basicstudies.plot.linewidth": 2,
+        "MFI@tv-basicstudies.plot.linewidth": 2, // Line width for MFI
         "Stochastic@tv-basicstudies.K.color": "#2962FF", // Blue for %K line
         "Stochastic@tv-basicstudies.D.color": "#FF6D00", // Orange for %D line
-        "Stochastic@tv-basicstudies.smooth": true,
-        "Stochastic@tv-basicstudies.k": 14,
-        "Stochastic@tv-basicstudies.d": 3,
-        "Stochastic@tv-basicstudies.upper_band": 80,
-        "Stochastic@tv-basicstudies.lower_band": 20
+        "Stochastic@tv-basicstudies.smooth": true, // Smooth the Stochastic
+        "Stochastic@tv-basicstudies.k": 14, // %K period
+        "Stochastic@tv-basicstudies.d": 3, // %D period
+        "Stochastic@tv-basicstudies.upper_band": 80, // Upper band (overbought)
+        "Stochastic@tv-basicstudies.lower_band": 20 // Lower band (oversold)
       }
     };
   }, [interval, theme]);
 
   /**
    * Function to initialize or reinitialize the TradingView widget
+   * This is called when the component mounts or when the chart type or symbol changes
    */
   const initializeWidget = useCallback(() => {
     // Check if the TradingView object is available
@@ -196,11 +210,9 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
       try {
         // Create a new TradingView widget with the current configuration
         new window.TradingView.widget(createWidgetConfig(chartType, currentSymbol));
-        // Set loading to false as the widget has been initialized
-        setLoading(false);
+        setLoading(false); // Set loading to false as the widget has been initialized
       } catch (err) {
-        // If there's an error, set the error state and stop loading
-        setError("Failed to initialize TradingView widget");
+        setError("Failed to initialize TradingView widget"); // Set error state if initialization fails
         setLoading(false);
       }
     }
@@ -208,19 +220,19 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
 
   /**
    * Function to handle chart type change
+   * This is called when the user selects a different chart type from the menu
+   *
    * @param {ChartType} type - The new chart type
    */
   const handleChartTypeChange = useCallback((type: ChartType) => {
-    // Update the chart type state
-    setChartType(type);
-    // Clean up the existing widget
-    cleanupWidget();
-    // Reinitialize the widget with the new chart type
-    initializeWidget();
+    setChartType(type); // Update the chart type state
+    cleanupWidget(); // Clean up the existing widget
+    initializeWidget(); // Reinitialize the widget with the new chart type
   }, [cleanupWidget, initializeWidget]);
 
   /**
    * Effect to load the TradingView library and initialize the widget
+   * This runs once when the component mounts
    */
   useEffect(() => {
     // Create a new script element for the TradingView library
@@ -228,8 +240,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
     script.src = 'https://s3.tradingview.com/tv.js';
     script.async = true;
 
-    // Define what happens when the script loads successfully
-    script.onload = initializeWidget;
+    script.onload = initializeWidget; // Initialize widget when script loads
 
     // Define what happens if the script fails to load
     script.onerror = () => {
@@ -237,8 +248,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
       setLoading(false);
     };
 
-    // Add the script to the document head
-    document.head.appendChild(script);
+    document.head.appendChild(script); // Add the script to the document head
 
     // Cleanup function to remove the script and widget when component unmounts
     return () => {
@@ -249,33 +259,43 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
 
   /**
    * Effect to handle symbol changes
- * This effect runs whenever the 'symbol' prop changes, which is expected to be frequent
+   * This effect runs whenever the 'symbol' prop changes
    */
   useEffect(() => {
     if (symbol !== currentSymbol) {
-    // Update the current symbol state immediately
-    // This ensures that our component always has the latest symbol
-      setCurrentSymbol(symbol);
-    // Note: Widget reinitialization is handled in the next effect
+      setCurrentSymbol(symbol); // Update the current symbol state
+      cleanupWidget(); // Clean up the existing widget
+      initializeWidget(); // Initialize the new widget with the new symbol
     }
-}, [symbol, currentSymbol]); // Dependencies: only run this effect if 'symbol' or 'currentSymbol' changes
+  }, [symbol, currentSymbol, cleanupWidget, initializeWidget]);
 
   /**
-   * Effect to reinitialize the widget
-   * This effect runs whenever currentSymbol or chartType changes
-   * It's separate from the symbol update effect to allow for more efficient handling of frequent symbol changes
+   * Effect to periodically check the current symbol and update the configuration
    */
   useEffect(() => {
-    // Clean up the existing widget
-    cleanupWidget();
+    const intervalId = setInterval(() => {
+      if (window.TradingView && containerRef.current) {
+        const widgets = window.TradingView.widgets;
+        if (widgets && widgets.length > 0) {
+          const widget = widgets[0];
+          if (widget && widget.chart().symbol() !== currentSymbol) {
+            setCurrentSymbol(widget.chart().symbol());
+            cleanupWidget();
     // Initialize the new widget with current symbol and chart type
     // This will update the main chart and the "_SHORT_VOLUME" chart in the "NewPane"
-    initializeWidget();
-  // This effect depends on currentSymbol, chartType, and the initializeWidget and cleanupWidget functions
-  }, [currentSymbol, chartType, initializeWidget, cleanupWidget]);
+            initializeWidget();
+          }
+        }
+      }
+    }, 1000); // Check every second
+
+    // Cleanup function to clear the interval when component unmounts
+    return () => clearInterval(intervalId);
+  }, [currentSymbol, cleanupWidget, initializeWidget]);
 
   /**
    * Effect to handle keyboard navigation
+   * This allows users to switch between chart types using left and right arrow keys
    */
   useEffect(() => {
     // Function to handle keydown events
