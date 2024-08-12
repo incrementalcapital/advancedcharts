@@ -18,8 +18,9 @@ enum ChartType {
   ShortInterest = 'Short Interest', // Shows short volume data alongside the main chart
   MACD = 'MACD', // Moving Average Convergence Divergence
   RSI = 'RSI', // Relative Strength Index
-  OBV = 'OBV', // On-Balance Volume
   AD = 'AD', // Accumulation/Distribution
+  LinearRegression = 'Linear Regression', // New chart type
+  OBV = 'OBV', // On-Balance Volume
   ATR = 'ATR', // Average True Range
   SlowStoch = 'Slow Stochastic' // Slow Stochastic Oscillator
 }
@@ -172,6 +173,9 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
       case ChartType.AD:
         studies = ["ACCD@tv-basicstudies"];
         break;
+      case ChartType.LinearRegression:
+        studies = ["LinearRegression@tv-basicstudies"];
+        break;
       case ChartType.ATR:
         studies = ["ATR@tv-basicstudies"];
         break;
@@ -180,7 +184,6 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
         break;
     }
 
-    // Combine the base configuration with compare symbols and studies
     return {
       ...baseConfig,
       compareSymbols,
@@ -198,7 +201,12 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
         "Stochastic@tv-basicstudies.k": 14, // %K period
         "Stochastic@tv-basicstudies.d": 3, // %D period
         "Stochastic@tv-basicstudies.upper_band": 80, // Upper band (overbought)
-        "Stochastic@tv-basicstudies.lower_band": 20 // Lower band (oversold)
+        "Stochastic@tv-basicstudies.lower_band": 20, // Lower band (oversold)
+        "LinearRegression@tv-basicstudies.linewidth": 2,
+        "LinearRegression@tv-basicstudies.upper_band.color": "#FF9900",
+        "LinearRegression@tv-basicstudies.lower_band.color": "#FF9900",
+        "LinearRegression@tv-basicstudies.source": "close",
+        "LinearRegression@tv-basicstudies.period": 100
       }
     };
   }, [interval, theme]);
