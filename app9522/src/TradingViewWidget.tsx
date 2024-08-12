@@ -1,6 +1,6 @@
 /**
  * @file TradingViewWidget.tsx
- * @description A React component that renders a TradingView Advanced Chart widget with a menu for different chart types.
+ * @description A React component that renders a TradingView Advanced Chart widget with improved UI and functionality.
  * This component allows users to view various technical indicators and compare multiple symbols on a single chart.
  */
 
@@ -30,12 +30,9 @@ enum ChartType {
  * @property {('light'|'dark')} [theme='dark'] - The color theme of the widget
  */
 interface TradingViewWidgetProps {
-  /** The initial stock symbol to display */
-  initialSymbol: string;
-  /** The time interval for the chart (e.g., 'D' for daily) */
-  interval?: string;
-  /** The color theme of the widget */
-  theme?: 'light' | 'dark';
+  initialSymbol?: string; // The initial symbol to display on the chart
+  interval?: string; // The default time interval for the chart
+  theme?: 'light' | 'dark'; // The color theme of the widget
 }
 
 /**
@@ -44,16 +41,13 @@ interface TradingViewWidgetProps {
  * @interface CompareSymbol
  */
 interface CompareSymbol {
-  /** The symbol to compare */
-  symbol: string;
-  /** Optional title for the compare symbol */
-  title?: string;
-  /** Position on the chart (e.g., 'NewPriceScale' for a new price scale) */
-  position: string;
+  symbol: string; // The symbol to compare
+  title?: string; // Optional title for the compare symbol
+  position: string; // Position on the chart (e.g., 'NewPriceScale' for a new price scale)
 }
 
 /**
- * Extends the global Window interface to include the TradingView property
+ * Extend the global Window interface to include the TradingView property
  * This is necessary because TypeScript doesn't know about the TradingView object by default
  * @global
  */
@@ -62,6 +56,11 @@ declare global {
     TradingView: any; // 'any' is used because we don't have exact typings for the TradingView object
   }
 }
+
+/**
+ * Predefined watchlist of ticker symbols
+ */
+const WATCHLIST = ["INDEX:SPX", "NASDAQ:AMAT", "NASDAQ:ARM", "NASDAQ:QCOM", "NASDAQ:NVDA", "NYSE:TSM"];
 
 /**
  * TradingViewWidget component
@@ -79,9 +78,9 @@ declare global {
  * @returns {JSX.Element} The rendered TradingView widget with menu
  */
 const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
-  initialSymbol,
-  interval = 'D',
-  theme = 'dark'
+  initialSymbol = 'INDEX:SPX', // Default to S&P 500 index
+  interval = 'D', // Default to daily interval
+  theme = 'dark' // Default to dark theme
 }) => {
   // Reference to the container div for the TradingView widget
   const containerRef = useRef<HTMLDivElement>(null);
@@ -106,6 +105,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
    * @function
    */
   const cleanupWidget = useCallback(() => {
+    // If the container ref exists, clear its contents
     if (containerRef.current) {
       containerRef.current.innerHTML = '';
     }
@@ -138,13 +138,6 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
       withdateranges: true, // Show date range selector
       hide_side_toolbar: false, // Show side toolbar
       allow_symbol_change: true, // Allow changing the symbol
-      watchlist: [ // Predefined watchlist
-        "NASDAQ:AMAT",
-        "NASDAQ:ARM",
-        "NASDAQ:QCOM",
-        "NASDAQ:NVDA",
-        "NYSE:TSM"
-      ],
       details: true, // Show details
       hotlist: true, // Show hotlist
       calendar: true, // Show calendar
@@ -315,39 +308,61 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [chartType, handleChartTypeChange]);
 
+  /**
+   * Handles form submission for changing the symbol
+   */
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // Prevent the default form submission behavior
+    if (inputSymbol.trim() !== '') {
+      handleSymbolChange(inputSymbol); // Change the symbol if input is not empty
+      setInputSymbol(''); // Clear the input field after submission
+    }
+  };
+
   // If there's an error, render an error message
   if (error) {
     return <div>Error: {error}</div>;
   }
 
-  // Render the TradingView widget with menu
+  // Render the TradingView widget with controls
   return (
     <div className="flex flex-col h-full">
-      {/* Top bar with symbol input and chart type buttons */}
-      <div className="flex justify-between items-center space-x-2 p-2 bg-gray-800">
-        {/* Symbol input field and change button */}
-        <div className="flex items-center">
+      {/* Controls section */}
+      <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-2 p-2 bg-gray-800">
+        {/* Form for manual symbol input */}
+        <form onSubmit={handleSubmit} className="w-full sm:w-auto">
           <input
             type="text"
             value={inputSymbol}
             onChange={(e) => setInputSymbol(e.target.value)}
             placeholder="Enter symbol..."
-            className="px-2 py-1 rounded mr-2 text-black"
+            className="w-full sm:w-64 px-2 py-1 rounded text-black"
           />
-          <button
-            onClick={() => handleSymbolChange(inputSymbol)}
-            className="px-2 py-1 bg-blue-500 text-white rounded"
+        </form>
+        {/* Dropdown for watchlist */}
+        <div className="relative w-full sm:w-auto">
+          <select
+            onChange={(e) => handleSymbolChange(e.target.value)}
+            className="appearance-none w-full sm:w-64 bg-white border border-gray-300 text-gray-700 py-2 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
           >
-            Change Symbol
-          </button>
+            <option value="">Select from watchlist</option>
+            {WATCHLIST.map((symbol) => (
+              <option key={symbol} value={symbol}>{symbol}</option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+            </svg>
+          </div>
         </div>
         {/* Chart type selection buttons */}
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap justify-center sm:justify-end space-x-2">
           {Object.values(ChartType).map((type) => (
             <button
               key={type}
               onClick={() => handleChartTypeChange(type)}
-              className={`px-4 py-2 rounded ${
+              className={`px-2 py-1 rounded text-xs ${
                 chartType === type
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-600 text-gray-200 hover:bg-gray-500'
