@@ -19,17 +19,6 @@ interface AdvancedChartsProps {
 }
 
 /**
- * @global
- * @description Declares a global interface for the TradingView object on the window object.
- * This helps TypeScript understand the TradingView API.
- */
-declare global {
-  interface Window {
-    TradingView: any; // 'any' is used here since TradingView's API may not have a complete TypeScript definition
-  }
-}
-
-/**
  * @component AdvancedCharts
  * @description The AdvancedCharts component renders an advanced chart using the TradingView library.
  * @param {AdvancedChartsProps} props - The properties for the component.
