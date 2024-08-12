@@ -6,148 +6,126 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 /**
- * Props interface for the AdvancedCharts component.
- * @interface
+ * @interface AdvancedChartsProps
+ * @description Defines the props required by the AdvancedCharts component.
  */
 interface AdvancedChartsProps {
-  /** The trading symbol to display on the chart (e.g., "NASDAQ:AAPL") */
+  /** The symbol to display in the chart. */
   symbol: string;
-  /** The width of the chart. Can be a number (interpreted as pixels) or a string (e.g., "100%") */
+  /** The width of the chart. */
   width: string | number;
-  /** The height of the chart. Can be a number (interpreted as pixels) or a string (e.g., "400px") */
+  /** The height of the chart. */
   height: string | number;
 }
 
 /**
- * AdvancedCharts component that renders a TradingView chart with a comparison line on a new left scale.
- * @param {AdvancedChartsProps} props - The props for the component
- * @returns {JSX.Element} An iframe containing the TradingView chart
+ * @global
+ * @description Declares a global interface for the TradingView object on the window object.
+ * This helps TypeScript understand the TradingView API.
+ */
+declare global {
+  interface Window {
+    TradingView: any; // 'any' is used here since TradingView's API may not have a complete TypeScript definition
+  }
+}
+
+/**
+ * @component AdvancedCharts
+ * @description The AdvancedCharts component renders an advanced chart using the TradingView library.
+ * @param {AdvancedChartsProps} props - The properties for the component.
+ * @returns {JSX.Element} The rendered component.
  */
 const AdvancedCharts: React.FC<AdvancedChartsProps> = ({ symbol, width, height }) => {
-  // Create a ref to hold the iframe element
-  const containerRef = useRef<HTMLIFrameElement>(null);
-  
-  // State to hold any error messages
-  const [error, setError] = useState<string | null>(null);
+  /**
+   * @description A reference to the container div where the TradingView chart will be rendered.
+   * useRef is used to persist this reference across component re-renders.
+   */
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Use an effect to set up the TradingView widget when the component mounts or props change
-  useEffect(() => {
-    // Check if the containerRef is available
-    if (containerRef.current) {
-      // Get a reference to the iframe element
-      const iframe = containerRef.current;
-      
-      // Generate the compare symbol by replacing the exchange prefix with "FINRA" and adding "_SHORT_VOLUME"
-      const compareSymbol = `FINRA:${symbol.split(':')[1]}_SHORT_VOLUME`;
-      
-      // Create the JavaScript code that will run inside the iframe
-      const script = `
-        // Create a new TradingView widget
-        new TradingView.widget({
-          symbol: "${symbol}",  // The main symbol to display
-          interval: "D",        // Daily interval
-          width: ${typeof width === 'number' ? width : `"${width}"`},  // Set the width
-          height: ${typeof height === 'number' ? height : `"${height}"`},  // Set the height
-          timezone: "Etc/UTC",  // Use UTC timezone
-          theme: "light",       // Use light theme
-          style: "1",           // Chart style (1 is the default style)
-          locale: "en",         // Use English locale
-          enable_publishing: false,  // Disable publishing features
-          allow_symbol_change: true, // Allow changing the symbol
-          save_image: false,         // Disable saving image feature
-          container_id: "tradingview_widget",  // ID of the container div
+  /**
+   * @function loadTradingViewScript
+   * @description Loads the TradingView script dynamically if it's not already loaded.
+   * @returns {Promise<void>} A promise that resolves when the script is loaded.
+   */
+  const loadTradingViewScript = () => {
+    return new Promise<void>((resolve, reject) => {
+      // Check if the TradingView script is already loaded
+      if (window.TradingView) {
+        resolve(); // Resolve immediately if the script is already loaded
+      } else {
+        const script = document.createElement('script'); // Create a new script element
+        script.src = 'https://s3.tradingview.com/tv.js'; // Set the source to TradingView's script
+        script.async = true; // Load the script asynchronously
+        script.onload = () => resolve(); // Resolve the promise when the script loads successfully
+        script.onerror = () => reject(new Error('TradingView script failed to load')); // Reject if there's an error
+        document.body.appendChild(script); // Append the script to the document body
+      }
+    });
+  };
+
+  /**
+   * @function renderChart
+   * @description Renders the TradingView chart using the widget API.
+   * This function is called after the script has been successfully loaded.
+   * @async
+   */
+  const renderChart = async () => {
+    try {
+      // Load the TradingView script if it's not already loaded
+      await loadTradingViewScript();
+
+      // Check if the container element is available and the TradingView object is loaded
+      if (containerRef.current && window.TradingView) {
+        // Initialize the TradingView widget with the provided options
+        new window.TradingView.widget({
+          symbol: symbol, // The symbol to display
+          interval: "D", // Daily interval
+          width: width, // Width of the chart
+          height: height, // Height of the chart
+          timezone: "Etc/UTC", // Timezone setting
+          theme: "light", // Light theme
+          style: "1", // Chart style
+          locale: "en", // Locale setting to English
+          enable_publishing: false, // Disable the ability to publish the chart
+          allow_symbol_change: true, // Allow the user to change the symbol
+          save_image: false, // Disable the ability to save the chart as an image
+          container_id: containerRef.current.id, // Use the ref's ID as the container ID
           studies: [
-            { 
-              id: "Compare@tv-basicstudies", 
-              inputs: { 
-                symbol: "${compareSymbol}"
+            {
+              id: "Compare@tv-basicstudies", // Add a comparison study
+              inputs: {
+                symbol: `FINRA:${symbol.split(':').pop()}_SHORT_VOLUME`, // Compare with the generated symbol
               },
-              options: {
-                "priceScale": "new-left",
-                "priceScaleId": "compare_left",
-                "scaleMargins": {
-                  "top": 0.2,
-                  "bottom": 0.2
-                },
-                "disableUnmerge": false,
-                "compareToMain": false
-              }
-            }
+              properties: {
+                'Plot.color.0': '#2196F3', // Customize the color of the study line
+                'Plot.scale.0': 'Left', // Place the volume study on the left scale
+                'Plot.type': 'Line', // Ensure the volume is displayed as a line (can also be histogram)
+              },
+            },
           ],
           overrides: {
-            "scalesProperties.showLeftScale": true,
-            "scalesProperties.showRightScale": true,
-            "scalesProperties.backgroundColor": "#ffffff",
-            "scalesProperties.lineColor": "#F0F3FA",
-            "scalesProperties.textColor": "#131722",
-            "mainSeriesProperties.priceAxisProperties.autoScale": true,
-            "mainSeriesProperties.priceAxisProperties.percentage": false,
-            "mainSeriesProperties.priceAxisProperties.log": false,
-            "compareToMainSeriesSource": "close",
-            "compareToMainSeriesUseChartScale": false,
-            "Compare@tv-basicstudies.style": 2,
-            "Compare@tv-basicstudies.linewidth": 2,
-            "Compare@tv-basicstudies.color": "#FF0000",
-            "Compare@tv-basicstudies.useCommonScale": false,
-            "Compare@tv-basicstudies.showInDataWindow": true,
-            "Compare@tv-basicstudies.visible": true,
-            "Compare@tv-basicstudies.showPriceTooltipFor": true
+            'mainSeriesProperties.priceLine.color': '#FF0000', // Customize the price line color if needed
+            'paneProperties.leftAxisProperties.autoScale': true, // Enable auto-scaling for the left axis (volume)
+            'paneProperties.rightAxisProperties.autoScale': true, // Enable auto-scaling for the right axis (price)
           },
-          customFeed: {
-            subscribeRealtime(callback) {
-              console.log('Subscription to realtime updates is not available.');
-              return function() {};
-            },
-            unsubscribeRealtime(subscriberId) {
-              console.log('Unsubscribe from realtime updates is not available.');
-            }
-          }
         });
-
-        // Error handling for WebSocket connections
-        window.addEventListener('error', function(event) {
-          if (event.message.includes('WebSocket connection')) {
-            console.log('WebSocket connection failed. This may affect real-time data updates.');
-          }
-        });
-      `;
-
-      // Create the HTML content for the iframe
-      const html = `
-        <html>
-          <head>
-            <!-- Load the TradingView library -->
-            <script src="https://s3.tradingview.com/tv.js"></script>
-          </head>
-          <body>
-            <!-- Container for the TradingView widget -->
-            <div id="tradingview_widget"></div>
-            <!-- Inline script to set up the widget -->
-            <script>${script}</script>
-          </body>
-        </html>
-      `;
-
-      // Set the HTML content of the iframe
-      iframe.srcdoc = html;
+      }
+    } catch (error) {
+      // Log any errors that occur during the rendering process
+      console.error('Error rendering chart:', error);
     }
-  }, [symbol, width, height]);  // Re-run this effect if symbol, width, or height changes
+  };
 
-  // Render an iframe that will contain the TradingView chart
-  return (
-    <>
-      {/* Display any errors if they occur */}
-      {error && <div style={{ color: 'red' }}>{error}</div>}
-      
-      {/* The iframe that will contain the TradingView chart */}
-      <iframe
-        ref={containerRef}  // Attach the ref to the iframe
-        style={{ width, height, border: 'none' }}  // Set the iframe dimensions and remove border
-        title="TradingView Advanced Chart"  // Set a title for accessibility
-      />
-    </>
-  );
+  /**
+   * @description useEffect hook to load the TradingView script and render the chart.
+   * This effect runs once when the component mounts and whenever the symbol, width, or height changes.
+   */
+  useEffect(() => {
+    renderChart(); // Call the renderChart function to render the chart
+  }, [symbol, width, height]); // Re-run the effect if symbol, width, or height changes
+
+  // Render the container div for the TradingView chart
+  return <div ref={containerRef} id={`tradingview_widget_${symbol.replace(':', '_')}`} style={{ width, height }} />;
 };
 
-// Export the component as the default export
 export default AdvancedCharts;
