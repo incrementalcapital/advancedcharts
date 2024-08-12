@@ -33,7 +33,7 @@ function App(): JSX.Element {
         Render the TradingViewWidget component
         
         We're not passing any props to TradingViewWidget here, which means it will use its default props:
-        - initialSymbol: 'INDEX:SPX' (S&P 500 index)
+        - initialSymbol: 'AMEX:SPY' (SPDR S&P 500 ETF Trust)
         - interval: 'D' (Daily interval)
         - theme: 'dark' (Dark theme)
         

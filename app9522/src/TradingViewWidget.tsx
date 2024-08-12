@@ -78,7 +78,7 @@ const WATCHLIST = ["INDEX:SPX", "NASDAQ:AMAT", "NASDAQ:ARM", "NASDAQ:QCOM", "NAS
  * @returns {JSX.Element} The rendered TradingView widget with menu
  */
 const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
-  initialSymbol = 'INDEX:SPX', // Default to S&P 500 index
+  initialSymbol = 'AMEX:SPY', // Default to SPDR S&P 500 ETF Trust
   interval = 'D', // Default to daily interval
   theme = 'dark' // Default to dark theme
 }) => {
