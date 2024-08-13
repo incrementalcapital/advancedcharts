@@ -2,6 +2,7 @@
  * @file TradingViewWidget.tsx
  * @description A React component that renders a TradingView Advanced Chart widget with improved UI and functionality.
  * This component allows users to view various technical indicators and compare multiple symbols on a single chart.
+ * It includes keyboard navigation for cycling through watchlist symbols and chart types.
  */
 
 // Import necessary React hooks and types
@@ -82,6 +83,9 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   // State to manage the input field for changing symbols
   const [inputSymbol, setInputSymbol] = useState('');
 
+  // State to keep track of the current index in the watchlist
+  const [watchlistIndex, setWatchlistIndex] = useState(0);
+
   /**
    * Cleanup function to remove the TradingView widget.
    * This function is memoized to prevent unnecessary re-renders.
@@ -127,7 +131,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
       popup_width: "1000", // Set popup width
       popup_height: "650", // Set popup height
       container_id: containerRef.current?.id, // Set the container ID for the widget
-          
+      
       // Define the chart structure with two panes
       charts: [
         { height: 85 }, // Main chart pane takes 85% of the height
@@ -208,14 +212,15 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
 
   /**
    * Handles changes in the symbol.
+   * This function is memoized to prevent unnecessary re-renders.
    * @function
    * @param {string} newSymbol - The new symbol to display
    */
-  const handleSymbolChange = (newSymbol: string) => {
+  const handleSymbolChange = useCallback((newSymbol: string) => {
     setCurrentSymbol(newSymbol); // Update the current symbol state
     cleanupWidget(); // Clean up the existing widget
     initializeWidget(); // Reinitialize the widget with the new symbol
-  };
+  }, [cleanupWidget, initializeWidget]); // Dependencies for this memoized function
 
   /**
    * Effect to load the TradingView library and initialize the widget.
@@ -248,7 +253,7 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
   }, [initializeWidget, cleanupWidget]); // Dependencies for this effect
 
   /**
-   * Effect to handle keyboard navigation for chart types.
+   * Effect to handle keyboard navigation for chart types and watchlist.
    * This effect sets up and cleans up event listeners for keyboard navigation.
    * @effect
    */
@@ -258,22 +263,48 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
       // Get an array of all chart types
       const chartTypes = Object.values(ChartType);
       // Find the index of the current chart type
-      const currentIndex = chartTypes.indexOf(chartType);
-      let newIndex: number;
+      const currentChartTypeIndex = chartTypes.indexOf(chartType);
 
-      // Handle arrow key navigation
-      if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
-        // Move to the previous chart type (wrap around if at the start)
-        newIndex = (currentIndex - 1 + chartTypes.length) % chartTypes.length;
-        setChartType(chartTypes[newIndex]);
-        cleanupWidget();
-        initializeWidget();
-      } else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
-        // Move to the next chart type (wrap around if at the end)
-        newIndex = (currentIndex + 1) % chartTypes.length;
-        setChartType(chartTypes[newIndex]);
-        cleanupWidget();
-        initializeWidget();
+      // Handle different arrow key presses
+      switch (event.key) {
+        case 'ArrowUp':
+          // Prevent default scrolling behavior
+          event.preventDefault();
+          // Update watchlist index, cycling to the previous symbol
+          setWatchlistIndex((prevIndex) => {
+            const newIndex = (prevIndex - 1 + WATCHLIST.length) % WATCHLIST.length;
+            handleSymbolChange(WATCHLIST[newIndex]);
+            return newIndex;
+          });
+          break;
+        case 'ArrowDown':
+          // Prevent default scrolling behavior
+          event.preventDefault();
+          // Update watchlist index, cycling to the next symbol
+          setWatchlistIndex((prevIndex) => {
+            const newIndex = (prevIndex + 1) % WATCHLIST.length;
+            handleSymbolChange(WATCHLIST[newIndex]);
+            return newIndex;
+          });
+          break;
+        case 'ArrowLeft':
+          // Prevent default behavior
+          event.preventDefault();
+          // Cycle to the previous chart type
+          const prevChartType = chartTypes[(currentChartTypeIndex - 1 + chartTypes.length) % chartTypes.length];
+          setChartType(prevChartType);
+          cleanupWidget();
+          initializeWidget();
+          break;
+        case 'ArrowRight':
+          // Prevent default behavior
+          event.preventDefault();
+          // Cycle to the next chart type
+          const nextChartType = chartTypes[(currentChartTypeIndex + 1) % chartTypes.length];
+          setChartType(nextChartType);
+          cleanupWidget();
+          initializeWidget();
+          break;
       }
     };
 
@@ -282,87 +313,88 @@ const TradingViewWidget: React.FC<TradingViewWidgetProps> = ({
 
     // Remove the event listener when the component unmounts
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [chartType, cleanupWidget, initializeWidget]); // Dependencies for this effect
+  }, [chartType, handleSymbolChange, cleanupWidget, initializeWidget]); // Dependencies for this effect
 
-/**
+  /**
    * Handles form submission for changing the symbol
    * @function
    * @param {React.FormEvent<HTMLFormElement>} e - The form submission event
    */
-const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault(); // Prevent the default form submission behavior
-  if (inputSymbol.trim() !== '') {
-    handleSymbolChange(inputSymbol); // Change the symbol if input is not empty
-    setInputSymbol(''); // Clear the input field after submission
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // Prevent the default form submission behavior
+    if (inputSymbol.trim() !== '') {
+      handleSymbolChange(inputSymbol); // Change the symbol if input is not empty
+      setInputSymbol(''); // Clear the input field after submission
+    }
+  };
+
+  // If there's an error, render an error message
+  if (error) {
+    return <div>Error: {error}</div>;
   }
-};
 
-// If there's an error, render an error message
-if (error) {
-  return <div>Error: {error}</div>;
-}
-
-// Render the TradingView widget with improved controls
-return (
-  <div className="flex flex-col h-full bg-gray-900 text-white">
-    {/* Controls section */}
-<div className="flex flex-col sm:flex-row justify-between items-center space-y-1 sm:space-y-0 sm:space-x-2 py-2 px-4 bg-gray-800 h-[2.5rem]">
-  {/* Watchlist dropdown */}
-  <div className="relative w-full sm:w-64">
-    <select
-      onChange={(e) => handleSymbolChange(e.target.value)}
-      className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-1 px-2 pr-8 rounded-md text-sm leading-tight focus:outline-none focus:bg-gray-600 focus:border-blue-500 transition-colors"
-    >
-      <option value="">SEMICONDUCTORS</option>
-      {WATCHLIST.map((symbol) => (
-        <option key={symbol} value={symbol}>{symbol}</option>
-      ))}
-    </select>
-    {/* Custom dropdown icon */}
-    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-      <ChevronDown size={16} />
-    </div>
-  </div>
-  {/* Symbol input form */}
-  <form onSubmit={handleSubmit} className="w-full sm:w-auto">
-    <input
-      type="text"
-      value={inputSymbol}
-      onChange={(e) => setInputSymbol(e.target.value)}
-      placeholder="Enter symbol..."
-      className="w-full sm:w-64 px-2 py-1 rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-sm"
-    />
-  </form>
-  {/* Chart type (indicator) dropdown */}
-  <div className="relative w-full sm:w-64">
-    <select
-      value={chartType}
-      onChange={handleChartTypeChange}
-      className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-1 px-2 pr-8 rounded-md text-sm leading-tight focus:outline-none focus:bg-gray-600 focus:border-blue-500 transition-colors"
-    >
-      {Object.values(ChartType).map((type) => (
-        <option key={type} value={type}>{type}</option>
-      ))}
-    </select>
-    {/* Custom dropdown icon */}
-    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-      <ChevronDown size={16} />
-    </div>
-  </div>
-</div>
-    {/* Container for the TradingView widget */}
-    <div className="flex-grow relative">
-      {/* Loading indicator with improved styling */}
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-10">
-          <div className="text-white">Loading TradingView widget...</div>
+  // Render the TradingView widget with improved controls
+  return (
+    <div className="flex flex-col h-full bg-black text-white">
+      {/* Controls section */}
+      <div className="flex flex-col sm:flex-row justify-between items-center space-y-1 sm:space-y-0 sm:space-x-2 py-2 px-4 bg-black h-[2.5rem]">
+        {/* Watchlist dropdown */}
+        <div className="relative w-full sm:w-64">
+          <select
+            value={currentSymbol}
+            onChange={(e) => handleSymbolChange(e.target.value)}
+            className="appearance-none w-full bg-gray-800 border border-gray-700 text-white py-1 px-2 pr-8 rounded-md text-sm leading-tight focus:outline-none focus:bg-gray-700 focus:border-blue-500 transition-colors"
+          >
+            <option value="">SEMICONDUCTORS</option>
+            {WATCHLIST.map((symbol) => (
+              <option key={symbol} value={symbol}>{symbol}</option>
+            ))}
+          </select>
+          {/* Custom dropdown icon */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+            <ChevronDown size={16} />
+          </div>
         </div>
-      )}
-      {/* TradingView widget container */}
-      <div id="tradingview_widget" ref={containerRef} className="w-full h-full" />
+        {/* Symbol input form */}
+        <form onSubmit={handleSubmit} className="w-full sm:w-auto">
+          <input
+            type="text"
+            value={inputSymbol}
+            onChange={(e) => setInputSymbol(e.target.value)}
+            placeholder="Enter symbol..."
+            className="w-full sm:w-64 px-2 py-1 rounded-md bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+          />
+        </form>
+        {/* Chart type (indicator) dropdown */}
+        <div className="relative w-full sm:w-64">
+          <select
+            value={chartType}
+            onChange={handleChartTypeChange}
+            className="appearance-none w-full bg-gray-800 border border-gray-700 text-white py-1 px-2 pr-8 rounded-md text-sm leading-tight focus:outline-none focus:bg-gray-700 focus:border-blue-500 transition-colors"
+          >
+            {Object.values(ChartType).map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          {/* Custom dropdown icon */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+            <ChevronDown size={16} />
+          </div>
+        </div>
+      </div>
+      {/* Container for the TradingView widget */}
+      <div className="flex-grow relative">
+        {/* Loading indicator with improved styling */}
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75 z-10">
+            <div className="text-white">Loading TradingView widget...</div>
+          </div>
+        )}
+        {/* TradingView widget container */}
+        <div id="tradingview_widget" ref={containerRef} className="w-full h-full" />
+      </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default TradingViewWidget;
