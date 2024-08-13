@@ -294,7 +294,7 @@ const createWidgetConfig = useCallback((type: ChartType, sym: string) => {
             onChange={(e) => handleSymbolChange(e.target.value)}
             className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-2 px-4 pr-8 rounded-md leading-tight focus:outline-none focus:bg-gray-600 focus:border-blue-500 transition-colors"
           >
-            <option value="">Select from watchlist</option>
+            <option value="">SEMICONDUCTORS</option>
             {WATCHLIST.map((symbol) => (
               <option key={symbol} value={symbol}>{symbol}</option>
             ))}
