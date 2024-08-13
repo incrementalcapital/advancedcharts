@@ -176,14 +176,16 @@ If you need to set up your existing TypeScript/React Amplify project on a new EC
 1. Run the `transfer-aws-configuration.bash` script on your local machine to copy AWS credentials to the new EC2 instance.
 2. SSH into your new EC2 instance.
 3. Clone or copy your project to your local machine or remote environment:
-   ```bash
-   git clone git@github.com:incrementalcapital/advancedcharts.git
-   cd advancedcharts
-   ```
+```bash
+ssh-keygen
+cat /home/ubuntu/.ssh/id_ed25519.pub
+git clone git@github.com:incrementalcapital/advancedcharts.git
+cd advancedcharts
+```
 4. Run the reinitialization script:
-   ```
-   bash reinitialize.bash
-   ```
+```bash
+bash reinitialize.bash
+```
 
 This script will:
 - Update the system and install necessary packages
