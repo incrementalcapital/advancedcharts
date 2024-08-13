@@ -30,7 +30,7 @@ interface TradingViewWidgetProps {
 /**
  * Predefined watchlist of ticker symbols
  */
-const WATCHLIST = ["AMEX:SPY", "NASDAQ:AMAT", "NASDAQ:ARM", "NASDAQ:QCOM", "NASDAQ:NVDA", "NYSE:TSM"];
+const WATCHLIST = ["NASDAQ:MRVL", "NASDAQ:ASML", "NASDAQ:KLAC", "NASDAQ:INTC", "NASDAQ:AVGO", "NASDAQ:SMCI", "NASDAQ:NVDA", "NASDAQ:LRCX", "NASDAQ:AMAT", "NASDAQ:TXN", "NASDAQ:ON", "NASDAQ:MU", "NASDAQ:QCOM", "NASDAQ:AMD", "NASDAQ:ARM", "NYSE:TSM", "NYSE:UMC", "NASDAQ:MCHP", "NASDAQ:ADI", "NASDAQ:NXPI", "KRX:000660", "TWSE:6533", "KRX:005930"];
 
 /**
  * TradingViewWidget component
