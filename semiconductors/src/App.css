@@ -1,0 +1,86 @@
+/* 
+ * App.css - Styles for the React application's main component, including layout, logo animation, and color scheme.
+ */
+
+/* 
+ * Styles for the main App component 
+ * - Centers text content horizontally within the component.
+ * - Sets the component's positioning context to 'relative', allowing child elements to be positioned absolutely within it. 
+ */
+ .App {
+  text-align: center; 
+  position: relative; 
+}
+
+/* 
+ * Styles for the App logo 
+ * - Sets the logo's height to 20px (assuming a square logo, this also controls its width).
+ * - Disables pointer events on the logo, preventing it from being clicked or interacted with.
+ * - Positions the logo absolutely within its nearest positioned ancestor (the .App container).
+ * - Positions the logo 20px from the bottom of the container.
+ * - Positions the logo 20px from the right of the container.
+ */
+.App-logo {
+  height: 20px; 
+  pointer-events: none; 
+  position: absolute; 
+  bottom: 20px; 
+  right: 20px;
+}
+
+/* 
+ * Applies animation to the logo only if the user prefers motion 
+ * - Targets environments where the user has not expressed a preference for reduced motion.
+ * - Applies the 'App-logo-spin' animation to the logo:
+ *   - The animation runs infinitely.
+ *   - Each cycle takes 20 seconds.
+ *   - The animation timing is linear (constant speed).
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear; 
+  }
+}
+
+/* 
+ * Styles for the App header 
+ * - Sets the background color to a dark gray (#282c34).
+ * - Ensures the header's minimum height is 100% of the viewport height.
+ * - Uses flexbox for layout:
+ *   - Arranges items in a column (vertical).
+ *   - Aligns items to the center horizontally.
+ *   - Justifies content to the center vertically.
+ * - Sets the font size using a combination of a fixed 10px and a relative 2vmin (viewport minimum) value.
+ * - Sets the text color to white.
+ */
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh; 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  justify-content: center; 
+  font-size: calc(10px + 2vmin); 
+  color: white;
+}
+
+/* 
+ * Styles for links within the App 
+ * - Sets the link color to a light blue (#61dafb).
+ */
+.App-link {
+  color: #61dafb;
+}
+
+/* 
+ * Defines the 'App-logo-spin' animation 
+ * - The animation smoothly rotates the element 360 degrees.
+ */
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg); 
+  }
+  to {
+    transform: rotate(360deg); 
+  }
+}
