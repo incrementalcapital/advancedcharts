@@ -306,50 +306,50 @@ if (error) {
 return (
   <div className="flex flex-col h-full bg-gray-900 text-white">
     {/* Controls section */}
-    <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-2 p-4 bg-gray-800">
-      {/* Symbol input form */}
-      <form onSubmit={handleSubmit} className="w-full sm:w-auto">
-        <input
-          type="text"
-          value={inputSymbol}
-          onChange={(e) => setInputSymbol(e.target.value)}
-          placeholder="Enter symbol..."
-          className="w-full sm:w-64 px-4 py-2 rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
-        />
-      </form>
-      {/* Watchlist dropdown */}
-      <div className="relative w-full sm:w-64">
-        <select
-          onChange={(e) => handleSymbolChange(e.target.value)}
-          className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-2 px-4 pr-8 rounded-md leading-tight focus:outline-none focus:bg-gray-600 focus:border-blue-500 transition-colors"
-        >
-          <option value="">SEMICONDUCTORS</option>
-          {WATCHLIST.map((symbol) => (
-            <option key={symbol} value={symbol}>{symbol}</option>
-          ))}
-        </select>
-        {/* Custom dropdown icon */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-          <ChevronDown size={20} />
-        </div>
-      </div>
-      {/* Chart type (indicator) dropdown */}
-      <div className="relative w-full sm:w-64">
-        <select
-          value={chartType}
-          onChange={handleChartTypeChange}
-          className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-2 px-4 pr-8 rounded-md leading-tight focus:outline-none focus:bg-gray-600 focus:border-blue-500 transition-colors"
-        >
-          {Object.values(ChartType).map((type) => (
-            <option key={type} value={type}>{type}</option>
-          ))}
-        </select>
-        {/* Custom dropdown icon */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-          <ChevronDown size={20} />
-        </div>
-      </div>
+<div className="flex flex-col sm:flex-row justify-between items-center space-y-1 sm:space-y-0 sm:space-x-2 py-2 px-4 bg-gray-800 h-[2.5rem]">
+  {/* Watchlist dropdown */}
+  <div className="relative w-full sm:w-64">
+    <select
+      onChange={(e) => handleSymbolChange(e.target.value)}
+      className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-1 px-2 pr-8 rounded-md text-sm leading-tight focus:outline-none focus:bg-gray-600 focus:border-blue-500 transition-colors"
+    >
+      <option value="">SEMICONDUCTORS</option>
+      {WATCHLIST.map((symbol) => (
+        <option key={symbol} value={symbol}>{symbol}</option>
+      ))}
+    </select>
+    {/* Custom dropdown icon */}
+    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+      <ChevronDown size={16} />
     </div>
+  </div>
+  {/* Symbol input form */}
+  <form onSubmit={handleSubmit} className="w-full sm:w-auto">
+    <input
+      type="text"
+      value={inputSymbol}
+      onChange={(e) => setInputSymbol(e.target.value)}
+      placeholder="Enter symbol..."
+      className="w-full sm:w-64 px-2 py-1 rounded-md bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+    />
+  </form>
+  {/* Chart type (indicator) dropdown */}
+  <div className="relative w-full sm:w-64">
+    <select
+      value={chartType}
+      onChange={handleChartTypeChange}
+      className="appearance-none w-full bg-gray-700 border border-gray-600 text-white py-1 px-2 pr-8 rounded-md text-sm leading-tight focus:outline-none focus:bg-gray-600 focus:border-blue-500 transition-colors"
+    >
+      {Object.values(ChartType).map((type) => (
+        <option key={type} value={type}>{type}</option>
+      ))}
+    </select>
+    {/* Custom dropdown icon */}
+    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+      <ChevronDown size={16} />
+    </div>
+  </div>
+</div>
     {/* Container for the TradingView widget */}
     <div className="flex-grow relative">
       {/* Loading indicator with improved styling */}
